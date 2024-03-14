@@ -193,9 +193,29 @@ class ForecastClient(BaseClient):
         :return: rates
         """
         request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
+
         data = self._make_api_request(request_url)
 
-        return rates_to_seismostats(
-            data['rates'],
-            data['starttime'],
-            data['endtime'])
+        data = data['rateforecasts']
+        rategrids = []
+        for rate in data:
+            gr_rategrid = rates_to_seismostats(
+                rate['rates'],
+                rate['starttime'],
+                rate['endtime'])
+            rategrids.append(gr_rategrid)
+        return rategrids
+
+    def get_modelrun_injectionplan(self, modelrun_id: int):
+        """
+        Get injection plan for a modelrun.
+        :param modelrun_id: id of the modelrun
+        :return: injection plan
+        """
+        request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
+
+        data = self._make_api_request(request_url)
+
+        print(data)
+
+        return data
