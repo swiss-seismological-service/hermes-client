@@ -1,13 +1,14 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 import requests
 from hydws.parser import BoreholeHydraulics
 from seismostats.seismicity.catalog import Catalog
 
 from ramsis_client.utils import (NoContent, RequestsError, make_request,
-                                 rates_to_seismostats)
+                                 parse_datetime, rates_to_seismostats)
 
 
 class BaseClient(ABC):
@@ -41,6 +42,31 @@ class BaseClient(ABC):
                 return response
 
 
+PROJECT_FIELDS = [
+    'id',
+    'name',
+    'description',
+    'starttime',
+    'endtime',
+    'creationtime']
+
+FORECASTSERIES_FIELDS = [
+    'id',
+    'name',
+    'starttime',
+    'endtime',
+    'creationtime',
+    'forecastinterval',
+    'status']
+
+FORECAST_FIELDS = [
+    'id',
+    'starttime',
+    'endtime',
+    'status',
+    'modelruns']
+
+
 class RamsisClient(BaseClient):
     def __init__(self,
                  url: str,
@@ -64,19 +90,11 @@ class RamsisClient(BaseClient):
         data = self._make_api_request(request_url)
 
         if not details:
-            keys = [
-                'id',
-                'name',
-                'description',
-                'starttime',
-                'endtime',
-                'creationtime']
-
             for project in data:
                 project['creationtime'] = \
                     project['creationinfo']['creationtime']
 
-            data = [{k: d[k] for k in keys if k in d} for d in data]
+            data = [{k: d[k] for k in PROJECT_FIELDS if k in d} for d in data]
 
         return data
 
@@ -90,20 +108,12 @@ class RamsisClient(BaseClient):
         data = self._make_api_request(request_url)
 
         if not details:
-            keys = [
-                'id',
-                'name',
-                'starttime',
-                'endtime',
-                'creationtime',
-                'forecastinterval',
-                'status']
-
             for forecastseries in data:
                 forecastseries['creationtime'] = \
                     forecastseries['creationinfo']['creationtime']
 
-            data = [{k: d[k] for k in keys if k in d} for d in data]
+            data = [{k: d[k] for k in FORECASTSERIES_FIELDS if k in d}
+                    for d in data]
 
         return data
 
@@ -119,13 +129,7 @@ class RamsisClient(BaseClient):
         data = self._make_api_request(request_url)
 
         if not details:
-            keys = [
-                'id',
-                'starttime',
-                'endtime',
-                'status']
-
-            data = [{k: d[k] for k in keys if k in d} for d in data]
+            data = [{k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
 
         return data
 
@@ -142,10 +146,9 @@ class RamsisClient(BaseClient):
         return data['modelruns'] if 'modelruns' in data else []
 
 
-class ForecastClient(BaseClient):
+class ForecastSeriesClient(BaseClient):
     def __init__(self,
                  url: str,
-                 project_id: int,
                  forecastseries_id: int,
                  timeout: int = None) -> None:
         """
@@ -157,19 +160,157 @@ class ForecastClient(BaseClient):
         self.url = f'{url}/v1'
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
-        self.project_id = project_id
         self.forecastseries_id = forecastseries_id
+        self.metadata = {}
 
-    def get_forecast_rates(self, forecast_id: int, models: list[str] = None,
-                           injectionplans: list[str] = None):
+        self._set_forecastseries_data()
+
+    def _set_forecastseries_data(self):
+        request_url = f'{self.url}/forecastseries/{self.forecastseries_id}'
+        self.metadata = self._make_api_request(request_url)
+
+    @property
+    def injectionplans(self):
+        """
+        List all injection plans for a forecast series.
+        :return: list of injection plans
+        """
+        return self.metadata['injectionplans']
+
+    def list_injectionplans(self):
+        """
+        List all injection plans for a forecast series.
+        :return: list of injection plans
+        """
+
+        request_url = f'{self.url}/forecastseries/' \
+                      f'{self.forecastseries_id}/injectionplans'
+
+        data = self._make_api_request(request_url)
+
+        for injectionplan in data:
+            injectionplan['borehole_hydraulics'] = \
+                BoreholeHydraulics(injectionplan['borehole_hydraulics'])
+
+        return data
+
+    @property
+    def modelconfigs(self):
+        """
+        List all models for a forecast series.
+        :return: list of models
+        """
+        return self.metadata['modelconfigs']
+
+    def list_modelconfigs(self):
+        """
+        List all modelconfigs for a forecast series.
+        :return: list of modelconfigs
+        """
+
+        request_url = f'{self.url}/forecastseries/' \
+                      f'{self.forecastseries_id}/modelconfigs'
+
+        data = self._make_api_request(request_url)
+
+        return data
+
+    def get_forecast_seismicity(self, forecast_id: int):
+        """
+        Get seismicity for a forecast.
+        :param forecast_id: id of the forecast
+        :return: seismicity
+        """
+        request_url = f'{self.url}/forecasts/{forecast_id}/seismiccatalog'
+
+        data = self._make_api_request(request_url)
+
+        return Catalog.from_quakeml(data)
+
+    def get_forecast_injectionwells(self, forecast_id: int):
+        """
+        Get hydraulics for a forecast.
+        :param forecast_id: id of the forecast
+        :return: hydraulics
+        """
+        request_url = f'{self.url}/forecasts/{forecast_id}/injectionwells'
+
+        data = self._make_api_request(request_url)
+
+        data = [BoreholeHydraulics(d) for d in data]
+
+        return data
+
+    def get_forecast_info_at_time(self,
+                                  datetime: datetime,
+                                  details=False) -> dict:
+        """
+        Get forecast by time.
+
+        Returns the most recent forecast that is valid at the given datetime.
+
+        :param datetime: datetime of the forecast
+        :return: forecast
+        """
+
+        request_url = \
+            f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
+
+        data = self._make_api_request(request_url)
+
+        data.sort(key=lambda x: parse_datetime(x['starttime']), reverse=True)
+
+        forecast = next(
+            (x for x in data if parse_datetime(
+                x['starttime']) <= datetime), {})
+
+        if not details:
+            forecast = {k: forecast[k]
+                        for k in FORECAST_FIELDS if k in forecast}
+
+        return forecast
+
+    def list_forecasts_info(self, details=False) -> list[dict]:
+        """
+        Get all forecasts for a forecast series.
+        :return: list of forecasts
+        """
+
+        request_url = \
+            f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
+
+        data = self._make_api_request(request_url)
+
+        if not details:
+            data = [{k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
+
+        return data
+
+    def list_modelruns_info(self, forecast_id: int) -> list[dict]:
+        """
+        List all forecast modelruns for a forecast.
+        :param forecast_id: id of the forecast
+        :return: list of forecast modelruns
+        """
+        request_url = f'{self.url}/forecasts/{forecast_id}'
+
+        data = self._make_api_request(request_url)
+
+        return data['modelruns'] if 'modelruns' in data else []
+
+    def list_forecast_rates(self,
+                            forecast_id: int,
+                            modelconfigs: list[str] = None,
+                            injectionplans: list[str] = None):
         """
         Get forecast rates for a forecast.
         :param forecast_id: id of the forecast
         :return: forecast rates
         """
         params = {}
-        if models:
-            params['models'] = models
+
+        if modelconfigs:
+            params['modelconfigs'] = modelconfigs
         if injectionplans:
             params['injectionplans'] = injectionplans
 
@@ -230,14 +371,14 @@ class ForecastClient(BaseClient):
 
         return hyd
 
-    def get_forecast_seismicity(self, forecast_id: int):
+    def get_modelrun_modelconfig(self, modelrun_id: int):
         """
-        Get seismicity for a forecast.
-        :param forecast_id: id of the forecast
-        :return: seismicity
+        Get model configuration for a modelrun.
+        :param modelrun_id: id of the modelrun
+        :return: model configuration
         """
-        request_url = f'{self.url}/forecasts/{forecast_id}/seismiccatalog'
+        request_url = f'{self.url}/modelruns/{modelrun_id}/modelconfig'
 
         data = self._make_api_request(request_url)
 
-        return Catalog.from_quakeml(data)
+        return data

@@ -86,3 +86,10 @@ def rates_to_seismostats(
     return ForecastGRRateGrid(dataframe,
                               starttime=starttime,
                               endtime=endtime)
+
+
+def parse_datetime(date: str):
+    try:
+        return datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
+    except BaseException:
+        return datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
