@@ -3,6 +3,8 @@ import logging
 from abc import ABC, abstractmethod
 
 import requests
+from hydws.parser import BoreholeHydraulics
+from seismostats.seismicity.catalog import Catalog
 
 from ramsis_client.utils import (NoContent, RequestsError, make_request,
                                  rates_to_seismostats)
@@ -33,7 +35,10 @@ class BaseClient(ABC):
             self.logger.error(f"Error while fetching data {err}")
         else:
             self.logger.info('Data received.')
-            return json.loads(response)
+            try:
+                return json.loads(response)
+            except json.JSONDecodeError:
+                return response
 
 
 class RamsisClient(BaseClient):
@@ -215,7 +220,24 @@ class ForecastClient(BaseClient):
         request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
 
         data = self._make_api_request(request_url)
+        injectionplan_id = data['injectionplan_id']
 
-        print(data)
+        request_url = f'{self.url}/injectionplans/{injectionplan_id}'
 
-        return data
+        hydws_data = self._make_api_request(request_url)
+
+        hyd = BoreholeHydraulics(hydws_data)
+
+        return hyd
+
+    def get_forecast_seismicity(self, forecast_id: int):
+        """
+        Get seismicity for a forecast.
+        :param forecast_id: id of the forecast
+        :return: seismicity
+        """
+        request_url = f'{self.url}/forecasts/{forecast_id}/seismiccatalog'
+
+        data = self._make_api_request(request_url)
+
+        return Catalog.from_quakeml(data)
