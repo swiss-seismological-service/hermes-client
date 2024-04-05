@@ -225,7 +225,7 @@ class ForecastSeriesClient(BaseClient):
 
         data = self._make_api_request(request_url)
 
-        return Catalog.from_quakeml(data)
+        return Catalog.from_quakeml(data, includequality=True)
 
     def get_forecast_injectionwells(self, forecast_id: int):
         """
