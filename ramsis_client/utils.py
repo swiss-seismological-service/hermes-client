@@ -55,37 +55,39 @@ def make_request(request, url, params={}, timeout=None,
         raise RequestsError(err, response=err.response)
 
 
-def rates_to_seismostats(
-        rates: dict,
-        starttime: datetime,
-        endtime: datetime) -> ForecastGRRateGrid:
+def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
     """
     Convert rates from ramsis to seismostats rate grid.
 
     :param rates: rates from ramsis
     :return: seismostats rate grid
     """
-    dataframe = pd.json_normalize(rates, sep='_')
+    df = pd.json_normalize(rates, sep='_')
 
-    dataframe.columns = dataframe.columns.str.replace(
+    df.columns = df.columns.str.replace(
         "_value", "")
 
-    if 'mc' not in dataframe.columns:
-        dataframe['mc'] = pd.NA
-    if 'a' not in dataframe.columns:
-        dataframe['a'] = pd.NA
-    if 'b' not in dataframe.columns:
-        dataframe['b'] = pd.NA
+    df['starttime'] = pd.to_datetime(df['starttime'])
+    df['endtime'] = pd.to_datetime(df['endtime'])
 
-    dataframe.rename(
-        columns={
-            'altitude_min': 'depth_min',
-            'altitude_max': 'depth_max'},
-        inplace=True)
+    if 'mc' not in df.columns:
+        df['mc'] = pd.NA
+    if 'a' not in df.columns:
+        df['a'] = pd.NA
+    if 'b' not in df.columns:
+        df['b'] = pd.NA
 
-    return ForecastGRRateGrid(dataframe,
-                              starttime=starttime,
-                              endtime=endtime)
+    grouped = df.groupby(['starttime', 'endtime'])
+
+    grids = []
+    for times, group in grouped:
+        new_df = ForecastGRRateGrid(
+            group.drop(columns=['starttime', 'endtime']),
+            starttime=times[0],
+            endtime=times[1])
+        grids.append(new_df)
+
+    return grids
 
 
 def parse_datetime(date: str):

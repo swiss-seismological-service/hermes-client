@@ -1,14 +1,13 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 import requests
 from hydws.parser import BoreholeHydraulics
 from seismostats.seismicity.catalog import Catalog
 
 from ramsis_client.utils import (NoContent, RequestsError, make_request,
-                                 parse_datetime, rates_to_seismostats)
+                                 rates_to_seismostats)
 
 
 class BaseClient(ABC):
@@ -42,29 +41,30 @@ class BaseClient(ABC):
                 return response
 
 
-PROJECT_FIELDS = [
-    'id',
-    'name',
-    'description',
-    'starttime',
-    'endtime',
-    'creationtime']
+PROJECT_FIELDS = {
+    'oid': 'id',
+    'name': 'name',
+    'description': 'description',
+    'starttime': 'starttime',
+    'endtime': 'endtime',
+    'creationtime': 'creationtime'
+}
 
-FORECASTSERIES_FIELDS = [
-    'id',
-    'name',
-    'starttime',
-    'endtime',
-    'creationtime',
-    'forecastinterval',
-    'status']
+FORECASTSERIES_FIELDS = {
+    'oid': 'id',
+    'name': 'name',
+    'starttime': 'starttime',
+    'endtime': 'endtime',
+    'creationtime': 'creationtime',
+    'forecastinterval': 'forecastinterval',
+    'status': 'status'}
 
-FORECAST_FIELDS = [
-    'id',
-    'starttime',
-    'endtime',
-    'status',
-    'modelruns']
+FORECAST_FIELDS = {
+    'oid': 'id',
+    'starttime': 'starttime',
+    'endtime': 'endtime',
+    'status': 'status',
+    'modelruns': 'modelruns'}
 
 
 class RamsisClient(BaseClient):
@@ -94,7 +94,8 @@ class RamsisClient(BaseClient):
                 project['creationtime'] = \
                     project['creationinfo']['creationtime']
 
-            data = [{k: d[k] for k in PROJECT_FIELDS if k in d} for d in data]
+            data = [{v: d[k] for k, v in PROJECT_FIELDS.items() if k in d}
+                    for d in data]
 
         return data
 
@@ -112,7 +113,8 @@ class RamsisClient(BaseClient):
                 forecastseries['creationtime'] = \
                     forecastseries['creationinfo']['creationtime']
 
-            data = [{k: d[k] for k in FORECASTSERIES_FIELDS if k in d}
+            data = \
+                [{v: d[k] for k, v in FORECASTSERIES_FIELDS.items() if k in d}
                     for d in data]
 
         return data
@@ -129,8 +131,8 @@ class RamsisClient(BaseClient):
         data = self._make_api_request(request_url)
 
         if not details:
-            data = [{k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
-
+            data = [{v: d[k] for k, v in FORECAST_FIELDS.items() if k in d}
+                    for d in data]
         return data
 
     def list_modelruns(self, forecast_id: int):
@@ -143,7 +145,12 @@ class RamsisClient(BaseClient):
 
         data = self._make_api_request(request_url)
 
-        return data['modelruns'] if 'modelruns' in data else []
+        modelruns = data['modelruns'] if 'modelruns' in data else []
+        for mr in modelruns:
+            for key in ('injectionplan_oid', 'modelconfig_oid', 'oid'):
+                if key in mr:
+                    mr[key.replace('oid', 'id')] = mr.pop(key)
+        return modelruns
 
 
 class ForecastSeriesClient(BaseClient):
@@ -241,35 +248,6 @@ class ForecastSeriesClient(BaseClient):
 
         return data
 
-    def get_forecast_info_at_time(self,
-                                  datetime: datetime,
-                                  details=False) -> dict:
-        """
-        Get forecast by time.
-
-        Returns the most recent forecast that is valid at the given datetime.
-
-        :param datetime: datetime of the forecast
-        :return: forecast
-        """
-
-        request_url = \
-            f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
-
-        data = self._make_api_request(request_url)
-
-        data.sort(key=lambda x: parse_datetime(x['starttime']), reverse=True)
-
-        forecast = next(
-            (x for x in data if parse_datetime(
-                x['starttime']) <= datetime), {})
-
-        if not details:
-            forecast = {k: forecast[k]
-                        for k in FORECAST_FIELDS if k in forecast}
-
-        return forecast
-
     def list_forecasts_info(self, details=False) -> list[dict]:
         """
         Get all forecasts for a forecast series.
@@ -296,7 +274,13 @@ class ForecastSeriesClient(BaseClient):
 
         data = self._make_api_request(request_url)
 
-        return data['modelruns'] if 'modelruns' in data else []
+        modelruns = data['modelruns'] if 'modelruns' in data else []
+        for mr in modelruns:
+            for key in ('injectionplan_oid', 'modelconfig_oid', 'oid'):
+                if key in mr:
+                    mr[key.replace('oid', 'id')] = mr.pop(key)
+
+        return modelruns
 
     def list_forecast_rates(self,
                             forecast_id: int,
@@ -318,16 +302,8 @@ class ForecastSeriesClient(BaseClient):
         data = self._make_api_request(request_url, params=params)
 
         for modelrun in data:
-            rateforecasts = modelrun['rateforecasts']
+            rategrids = rates_to_seismostats(modelrun['rateforecasts'])
 
-            rategrids = []
-
-            for rate in rateforecasts:
-                gr_rategrid = rates_to_seismostats(
-                    rate['rates'],
-                    rate['starttime'],
-                    rate['endtime'])
-                rategrids.append(gr_rategrid)
             modelrun['rateforecasts'] = rategrids
 
         return data
@@ -342,15 +318,7 @@ class ForecastSeriesClient(BaseClient):
 
         data = self._make_api_request(request_url)
 
-        data = data['rateforecasts']
-        rategrids = []
-        for rate in data:
-            gr_rategrid = rates_to_seismostats(
-                rate['rates'],
-                rate['starttime'],
-                rate['endtime'])
-            rategrids.append(gr_rategrid)
-        return rategrids
+        return rates_to_seismostats(data['rateforecasts'])
 
     def get_modelrun_injectionplan(self, modelrun_id: int):
         """
@@ -361,13 +329,13 @@ class ForecastSeriesClient(BaseClient):
         request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
 
         data = self._make_api_request(request_url)
-        injectionplan_id = data['injectionplan_id']
+        injectionplan_id = data['injectionplan_oid']
 
         request_url = f'{self.url}/injectionplans/{injectionplan_id}'
 
         hydws_data = self._make_api_request(request_url)
 
-        hyd = BoreholeHydraulics(hydws_data)
+        hyd = BoreholeHydraulics(hydws_data[0])
 
         return hyd
 
