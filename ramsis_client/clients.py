@@ -228,7 +228,8 @@ class ForecastSeriesClient(BaseClient):
         :param forecast_id: id of the forecast
         :return: seismicity
         """
-        request_url = f'{self.url}/forecasts/{forecast_id}/seismiccatalog'
+        request_url = \
+            f'{self.url}/forecasts/{forecast_id}/seismicityobservation'
 
         data = self._make_api_request(request_url)
 
@@ -240,7 +241,8 @@ class ForecastSeriesClient(BaseClient):
         :param forecast_id: id of the forecast
         :return: hydraulics
         """
-        request_url = f'{self.url}/forecasts/{forecast_id}/injectionwells'
+        request_url = \
+            f'{self.url}/forecasts/{forecast_id}/injectionobservation'
 
         data = self._make_api_request(request_url)
 
@@ -315,7 +317,6 @@ class ForecastSeriesClient(BaseClient):
         :return: rates
         """
         request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
-
         data = self._make_api_request(request_url)
 
         return rates_to_seismostats(data['rateforecasts'])

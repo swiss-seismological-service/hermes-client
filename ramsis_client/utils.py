@@ -69,6 +69,7 @@ def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
 
     df['starttime'] = pd.to_datetime(df['starttime'])
     df['endtime'] = pd.to_datetime(df['endtime'])
+    df = df.rename(columns={'realization_id': 'grid_id'})
 
     if 'mc' not in df.columns:
         df['mc'] = pd.NA
