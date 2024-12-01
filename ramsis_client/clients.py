@@ -198,7 +198,8 @@ class ForecastSeriesClient(BaseClient):
         for injectionplan in data:
             injectionplan['borehole_hydraulics'] = \
                 BoreholeHydraulics(injectionplan['borehole_hydraulics'])
-
+            if 'oid' in injectionplan:
+                injectionplan['id'] = injectionplan.pop('oid')
         return data
 
     @property
@@ -263,6 +264,10 @@ class ForecastSeriesClient(BaseClient):
 
         if not details:
             data = [{k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
+
+        for forecast in data:
+            if 'oid' in forecast:
+                forecast['id'] = forecast.pop('oid')
 
         return data
 
