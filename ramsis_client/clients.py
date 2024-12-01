@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 import requests
 from hydws.parser import BoreholeHydraulics
-from seismostats.seismicity.catalog import Catalog
+from seismostats import Catalog
 
 from ramsis_client.utils import (NoContent, RequestsError, make_request,
                                  rates_to_seismostats)
@@ -230,11 +230,11 @@ class ForecastSeriesClient(BaseClient):
         :return: seismicity
         """
         request_url = \
-            f'{self.url}/forecasts/{forecast_id}/seismicityobservation'
+            f'{self.url}/forecasts/{forecast_id}/seismicityobservations'
 
         data = self._make_api_request(request_url)
 
-        return Catalog.from_quakeml(data, includequality=True)
+        return Catalog.from_quakeml(data, include_quality=True)
 
     def get_forecast_injectionwells(self, forecast_id: int):
         """
@@ -243,7 +243,7 @@ class ForecastSeriesClient(BaseClient):
         :return: hydraulics
         """
         request_url = \
-            f'{self.url}/forecasts/{forecast_id}/injectionobservation'
+            f'{self.url}/forecasts/{forecast_id}/injectionobservations'
 
         data = self._make_api_request(request_url)
 

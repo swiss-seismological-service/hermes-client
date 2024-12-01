@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 import requests
-from seismostats.seismicity.rategrid import ForecastGRRateGrid
+from seismostats import ForecastGRRateGrid
 
 logger = logging.getLogger(__name__)
 
