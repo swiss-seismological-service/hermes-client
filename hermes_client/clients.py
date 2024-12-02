@@ -6,7 +6,7 @@ import requests
 from hydws.parser import BoreholeHydraulics
 from seismostats import Catalog
 
-from ramsis_client.utils import (NoContent, RequestsError, make_request,
+from hermes_client.utils import (NoContent, RequestsError, make_request,
                                  rates_to_seismostats)
 
 
@@ -67,13 +67,13 @@ FORECAST_FIELDS = {
     'modelruns': 'modelruns'}
 
 
-class RamsisClient(BaseClient):
+class HermesClient(BaseClient):
     def __init__(self,
                  url: str,
                  timeout: int = None) -> None:
         """
         Initialize Class.
-        :param url:     URL of the ramsis webservice
+        :param url:     URL of the hermes webservice
         :param timeout: after how long, contacting the webservice should
                         be aborted
         """
@@ -160,7 +160,7 @@ class ForecastSeriesClient(BaseClient):
                  timeout: int = None) -> None:
         """
         Initialize Class.
-        :param url:     URL of the ramsis webservice
+        :param url:     URL of the hermes webservice
         :param timeout: after how long, contacting the webservice should
                         be aborted
         """

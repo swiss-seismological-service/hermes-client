@@ -57,9 +57,9 @@ def make_request(request, url, params={}, timeout=None,
 
 def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
     """
-    Convert rates from ramsis to seismostats rate grid.
+    Convert rates from hermes to seismostats rate grid.
 
-    :param rates: rates from ramsis
+    :param rates: rates from hermes
     :return: seismostats rate grid
     """
     df = pd.json_normalize(rates, sep='_')
