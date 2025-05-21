@@ -1,111 +1,11 @@
-import json
 import logging
-from abc import ABC, abstractmethod
 from uuid import UUID
 
-import requests
 from hydws.parser import BoreholeHydraulics
 from seismostats import Catalog
 
-from hermes_client.utils import (NoContent, RequestsError, make_request,
-                                 rates_to_seismostats)
-
-
-class BaseClient(ABC):
-    @abstractmethod
-    def __init__(self):
-        pass
-
-    def _make_api_request(self, request_url: str, params: dict = {}):
-        try:
-            response = make_request(
-                requests.get,
-                request_url,
-                params,
-                self._timeout,
-                nocontent_codes=(
-                    204,
-                    404))
-
-        except NoContent:
-            self.logger.warning('No data received.')
-            return {}
-        except RequestsError as err:
-            self.logger.error(f"Request Error while fetching data ({err}).")
-        except BaseException as err:
-            self.logger.error(f"Error while fetching data {err}")
-        else:
-            self.logger.info('Data received.')
-            try:
-                return json.loads(response)
-            except json.JSONDecodeError:
-                return response
-
-
-class HermesClient(BaseClient):
-    def __init__(self,
-                 url: str,
-                 timeout: int = None):
-        """
-        Initialize Class.
-
-        Args:
-            url:        URL of the hermes webservice
-            timeout:    after how long, contacting the webservice should
-                        be aborted
-        """
-        self.url = f'{url}/v1'
-        self._timeout = timeout
-        self.logger = logging.getLogger(__name__)
-
-    def list_projects(self):
-        """
-        List all projects.
-
-        Returns:
-            list: list of projects
-        """
-        request_url = f'{self.url}/projects'
-        data = self._make_api_request(request_url)
-
-        return data
-
-    def list_forecastseries(self, project: UUID | str):
-        """
-        List all ForecastSeries for a project.
-
-        Args:
-            project: oid or name of the project.
-
-        Returns:
-            All ForecastSeries for the project.
-        """
-
-        try:
-            if not isinstance(project, UUID):
-                UUID(project)
-        except ValueError:
-            request_url = f'{self.url}/projects'
-            data = self._make_api_request(request_url)
-            project = next((p['oid'] for p in data if p['name'] == project),
-                           None)
-
-        request_url = f'{self.url}/projects/{str(project)}/forecastseries'
-        data = self._make_api_request(request_url)
-
-        return data
-
-    def list_modelconfigs(self):
-        """
-        List all model configurations.
-
-        Returns:
-            list: list of model configurations
-        """
-        request_url = f'{self.url}/modelconfigs'
-        data = self._make_api_request(request_url)
-
-        return data
+from hermes_client.base import BaseClient
+from hermes_client.utils import rates_to_seismostats
 
 
 class ForecastSeriesClient(BaseClient):
