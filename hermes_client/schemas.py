@@ -1,4 +1,5 @@
 import enum
+from datetime import datetime
 from typing import Self
 from uuid import UUID
 
@@ -16,6 +17,12 @@ class Model(BaseModel):
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True)
+
+
+class EResultType(str, enum.Enum):
+    GRID = 'GRID'
+    CATALOG = 'CATALOG'
+    BINS = 'BINS'
 
 
 class EStatus(str, enum.Enum):
@@ -51,3 +58,37 @@ class ForecastSeries(Model):
             return from_wkt(value)
 
         return value
+
+
+class InjectionPlanTemplate(Model):
+    oid: UUID | None = None
+    name: str | None = None
+    borehole_hydraulics: dict | None = None
+
+
+class ModelConfig(Model):
+    oid: UUID | None = None
+    name: str | None = None
+    enabled: bool = True
+    description: str | None = None
+    result_type: EResultType | None = None
+    sfm_module: str | None = None
+    sfm_function: str | None = None
+    last_modified: datetime | None = None
+
+    model_parameters: dict = {}
+
+    tags: list[str] = []
+
+
+class ForecastInfo(Model):
+    def __repr__(self):
+        return 'Forecast'
+
+    oid: UUID | None = None
+
+    status: EStatus | None = None
+
+    starttime: datetime | None = None
+    endtime: datetime | None = None
+    creationinfo: dict | None = None

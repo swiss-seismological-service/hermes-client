@@ -1,13 +1,11 @@
 import logging
 from uuid import UUID
 
-from hydws.parser import BoreholeHydraulics
-from seismostats import Catalog
-
 from hermes_client.base import BaseClient, NotFound
+from hermes_client.forecast import Forecast
 from hermes_client.hermes import HermesClient
-from hermes_client.schemas import ForecastSeries
-from hermes_client.utils import rates_to_seismostats
+from hermes_client.schemas import (ForecastSeries, InjectionPlanTemplate,
+                                   ModelConfig)
 
 
 class ForecastSeriesClient(BaseClient):
@@ -29,17 +27,21 @@ class ForecastSeriesClient(BaseClient):
                  forecastseries: UUID | str | None = None,
                  project: UUID | str | None = None,
                  timeout: int = None) -> None:
-        self.url = f'{url}/v1'
+        self.url = url
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
 
-        self._metadata = self._get_forecastseries_data(
+        self._metadata = self._get_forecastseries(
             url, forecastseries, project)
 
-    def _get_forecastseries_data(self,
-                                 url: str,
-                                 forecastseries: UUID | str | None = None,
-                                 project: UUID | str | None = None):
+        self._injectionplans = None
+        self._modelconfigs = None
+        self._forecasts = None
+
+    def _get_forecastseries(self,
+                            url: str,
+                            forecastseries: UUID | str | None = None,
+                            project: UUID | str | None = None):
         """
         Get a ForecastSeries.
 
@@ -84,95 +86,123 @@ class ForecastSeriesClient(BaseClient):
             return fs
 
     @property
-    def metadata(self):
+    def metadata(self) -> ForecastSeries:
         """
-        Get the metadata of the ForecastSeries.
+        General metadata of the ForecastSeries.
         """
         return ForecastSeries(**self._metadata)
 
     @property
+    def modelsettings(self) -> dict:
+        """
+        Model settings which are passed to all models.
+        """
+        return self._metadata['model_settings']
+
+    @property
     def injectionplans(self):
         """
-        List all injection plans for a forecast series.
-        :return: list of injection plans
+        The InjectionPlans used for Forecasts.
         """
-        return self._metadata['injectionplans']
+        if self._injectionplans is None:
+            self._injectionplans = self._get_injectionplans()
 
-    def list_injectionplans(self):
+        return [InjectionPlanTemplate.model_validate(i)
+                for i in self._injectionplans]
+
+    def _get_injectionplans(self) -> dict:
         """
-        List all injection plans for a forecast series.
-        :return: list of injection plans
+        Get all injection plans for the ForecastSeries.
         """
 
-        request_url = f'{self.url}/forecastseries/' \
-            f'{self.forecastseries_id}/injectionplans'
+        request_url = f'{self.url}/v1/forecastseries/' \
+            f'{self._metadata['oid']}/injectionplans'
 
         data = self._make_api_request(request_url)
 
-        for injectionplan in data:
-            injectionplan['borehole_hydraulics'] = \
-                BoreholeHydraulics(injectionplan['borehole_hydraulics'])
-            if 'oid' in injectionplan:
-                injectionplan['id'] = injectionplan.pop('oid')
         return data
 
     @property
-    def modelconfigs(self):
+    def modelconfigs(self) -> list[ModelConfig]:
         """
-        List all models for a forecast series.
-        :return: list of models
+        The ModelConfigs used for Forecasts.
         """
-        return self._metadata['modelconfigs']
+        if self._modelconfigs is None:
+            self._modelconfigs = self._get_modelconfigs()
+        return [ModelConfig.model_validate(m)
+                for m in self._modelconfigs]
 
-    def list_modelconfigs(self):
+    def _get_modelconfigs(self) -> dict:
         """
-        List all modelconfigs for a forecast series.
-        :return: list of modelconfigs
+        Get all modelconfigs for the ForecastSeries.
         """
 
-        request_url = f'{self.url}/forecastseries/' \
-            f'{self.forecastseries_id}/modelconfigs'
+        request_url = f'{self.url}/v1/forecastseries/' \
+            f'{self._metadata['oid']}/modelconfigs'
 
         data = self._make_api_request(request_url)
 
         return data
 
-    def get_forecast_seismicity(self, forecast_id: int):
+    @property
+    def forecasts(self) -> list[Forecast]:
         """
-        Get seismicity for a forecast.
-        :param forecast_id: id of the forecast
-        :return: seismicity
+        Finished or still running Forecasts.
         """
-        request_url = \
-            f'{self.url}/forecasts/{forecast_id}/seismicityobservations'
+        if self._forecasts is None:
+            self._forecasts = [Forecast(self.url, f)
+                               for f in self._get_forecasts()]
+
+        return self._forecasts
+
+    def _get_forecasts(self) -> dict:
+        """
+        Request all forecasts for the ForecastSeries.
+        """
+
+        request_url = f'{self.url}/v1/forecastseries/' \
+            f'{self._metadata['oid']}/forecasts'
 
         data = self._make_api_request(request_url)
-
-        return Catalog.from_quakeml(data, include_quality=True)
-
-    def get_forecast_injectionwells(self, forecast_id: int):
-        """
-        Get hydraulics for a forecast.
-        :param forecast_id: id of the forecast
-        :return: hydraulics
-        """
-        request_url = \
-            f'{self.url}/forecasts/{forecast_id}/injectionobservations'
-
-        data = self._make_api_request(request_url)
-
-        data = [BoreholeHydraulics(d) for d in data]
 
         return data
+
+    # def get_forecast_seismicity(self, forecast_id: int):
+    #     """
+    #     Get seismicity for a forecast.
+    #     :param forecast_id: id of the forecast
+    #     :return: seismicity
+    #     """
+    #     request_url = \
+    #         f'{self.url}/v1/forecasts/{forecast_id}/seismicityobservations'
+
+    #     data = self._make_api_request(request_url)
+
+    #     return Catalog.from_quakeml(data, include_quality=True)
+
+    # def get_forecast_injectionwells(self, forecast_id: int):
+    #     """
+    #     Get hydraulics for a forecast.
+    #     :param forecast_id: id of the forecast
+    #     :return: hydraulics
+    #     """
+    #     request_url = \
+    #         f'{self.url}/v1/forecasts/{forecast_id}/injectionobservations'
+
+    #     data = self._make_api_request(request_url)
+
+    #     data = [BoreholeHydraulics(d) for d in data]
+
+    #     return data
 
     # def list_forecasts_info(self, details=False) -> list[dict]:
     #     """
-    #     Get all forecasts for a forecast series.
+    #     Get all forecasts for a ForecastSeries.
     #     :return: list of forecasts
     #     """
 
     #     request_url = \
-    #         f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
+    #         f'{self.url}/v1/forecastseries/{self.forecastseries_id}/forecasts'
 
     #     data = self._make_api_request(request_url)
 
@@ -186,88 +216,88 @@ class ForecastSeriesClient(BaseClient):
 
     #     return data
 
-    def list_modelruns_info(self, forecast_id: int) -> list[dict]:
-        """
-        List all forecast modelruns for a forecast.
-        :param forecast_id: id of the forecast
-        :return: list of forecast modelruns
-        """
-        request_url = f'{self.url}/forecasts/{forecast_id}'
+    # def list_modelruns_info(self, forecast_id: int) -> list[dict]:
+    #     """
+    #     List all forecast modelruns for a forecast.
+    #     :param forecast_id: id of the forecast
+    #     :return: list of forecast modelruns
+    #     """
+    #     request_url = f'{self.url}/v1/forecasts/{forecast_id}'
 
-        data = self._make_api_request(request_url)
+    #     data = self._make_api_request(request_url)
 
-        modelruns = data['modelruns'] if 'modelruns' in data else []
-        for mr in modelruns:
-            for key in ('injectionplan_oid', 'modelconfig_oid', 'oid'):
-                if key in mr:
-                    mr[key.replace('oid', 'id')] = mr.pop(key)
+    #     modelruns = data['modelruns'] if 'modelruns' in data else []
+    #     for mr in modelruns:
+    #         for key in ('injectionplan_oid', 'modelconfig_oid', 'oid'):
+    #             if key in mr:
+    #                 mr[key.replace('oid', 'id')] = mr.pop(key)
 
-        return modelruns
+    #     return modelruns
 
-    def list_forecast_rates(self,
-                            forecast_id: int,
-                            modelconfigs: list[str] = None,
-                            injectionplans: list[str] = None):
-        """
-        Get forecast rates for a forecast.
-        :param forecast_id: id of the forecast
-        :return: forecast rates
-        """
-        params = {}
+    # def list_forecast_rates(self,
+    #                         forecast_id: int,
+    #                         modelconfigs: list[str] = None,
+    #                         injectionplans: list[str] = None):
+    #     """
+    #     Get forecast rates for a forecast.
+    #     :param forecast_id: id of the forecast
+    #     :return: forecast rates
+    #     """
+    #     params = {}
 
-        if modelconfigs:
-            params['modelconfigs'] = modelconfigs
-        if injectionplans:
-            params['injectionplans'] = injectionplans
+    #     if modelconfigs:
+    #         params['modelconfigs'] = modelconfigs
+    #     if injectionplans:
+    #         params['injectionplans'] = injectionplans
 
-        request_url = f'{self.url}/forecasts/{forecast_id}/rates'
-        data = self._make_api_request(request_url, params=params)
+    #     request_url = f'{self.url}/v1/forecasts/{forecast_id}/rates'
+    #     data = self._make_api_request(request_url, params=params)
 
-        for modelrun in data:
-            rategrids = rates_to_seismostats(modelrun['rateforecasts'])
+    #     for modelrun in data:
+    #         rategrids = rates_to_seismostats(modelrun['rateforecasts'])
 
-            modelrun['rateforecasts'] = rategrids
+    #         modelrun['rateforecasts'] = rategrids
 
-        return data
+    #     return data
 
-    def get_modelrun_rates(self, modelrun_id: int):
-        """
-        Get rates for a modelrun.
-        :param modelrun_id: id of the modelrun
-        :return: rates
-        """
-        request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
-        data = self._make_api_request(request_url)
+    # def get_modelrun_rates(self, modelrun_id: int):
+    #     """
+    #     Get rates for a modelrun.
+    #     :param modelrun_id: id of the modelrun
+    #     :return: rates
+    #     """
+    #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/rates'
+    #     data = self._make_api_request(request_url)
 
-        return rates_to_seismostats(data['rateforecasts'])
+    #     return rates_to_seismostats(data['rateforecasts'])
 
-    def get_modelrun_injectionplan(self, modelrun_id: int):
-        """
-        Get injection plan for a modelrun.
-        :param modelrun_id: id of the modelrun
-        :return: injection plan
-        """
-        request_url = f'{self.url}/modelruns/{modelrun_id}/rates'
+    # def get_modelrun_injectionplan(self, modelrun_id: int):
+    #     """
+    #     Get injection plan for a modelrun.
+    #     :param modelrun_id: id of the modelrun
+    #     :return: injection plan
+    #     """
+    #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/rates'
 
-        data = self._make_api_request(request_url)
-        injectionplan_id = data['injectionplan_oid']
+    #     data = self._make_api_request(request_url)
+    #     injectionplan_id = data['injectionplan_oid']
 
-        request_url = f'{self.url}/injectionplans/{injectionplan_id}'
+    #     request_url = f'{self.url}/v1/injectionplans/{injectionplan_id}'
 
-        hydws_data = self._make_api_request(request_url)
+    #     hydws_data = self._make_api_request(request_url)
 
-        hyd = BoreholeHydraulics(hydws_data[0])
+    #     hyd = BoreholeHydraulics(hydws_data[0])
 
-        return hyd
+    #     return hyd
 
-    def get_modelrun_modelconfig(self, modelrun_id: int):
-        """
-        Get model configuration for a modelrun.
-        :param modelrun_id: id of the modelrun
-        :return: model configuration
-        """
-        request_url = f'{self.url}/modelruns/{modelrun_id}/modelconfig'
+    # def get_modelrun_modelconfig(self, modelrun_id: int):
+    #     """
+    #     Get model configuration for a modelrun.
+    #     :param modelrun_id: id of the modelrun
+    #     :return: model configuration
+    #     """
+    #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/modelconfig'
 
-        data = self._make_api_request(request_url)
+    #     data = self._make_api_request(request_url)
 
-        return data
+    #     return data

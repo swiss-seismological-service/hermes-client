@@ -16,7 +16,7 @@ class HermesClient(BaseClient):
             timeout:    after how long, contacting the webservice should
                         be aborted
         """
-        self.url = f'{url}/v1'
+        self.url = url
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class HermesClient(BaseClient):
         Returns:
             list: list of projects
         """
-        request_url = f'{self.url}/projects'
+        request_url = f'{self.url}/v1/projects'
         data = self._make_api_request(request_url)
 
         return data
@@ -41,7 +41,7 @@ class HermesClient(BaseClient):
         Returns:
             The project.
         """
-        request_url = f'{self.url}/projects'
+        request_url = f'{self.url}/v1/projects'
         data = self._make_api_request(request_url)
         project = next((p for p in data if p['name'] == project_name),
                        None)
@@ -60,7 +60,7 @@ class HermesClient(BaseClient):
         Returns:
             The project.
         """
-        request_url = f'{self.url}/projects/{str(project_oid)}'
+        request_url = f'{self.url}/v1/projects/{str(project_oid)}'
         project = self._make_api_request(request_url)
         if project is None:
             raise NotFound(
@@ -85,7 +85,7 @@ class HermesClient(BaseClient):
         except ValueError:
             project = self.get_project_by_name(project)['oid']
 
-        request_url = f'{self.url}/projects/{str(project)}/forecastseries'
+        request_url = f'{self.url}/v1/projects/{str(project)}/forecastseries'
         data = self._make_api_request(request_url)
 
         return data
@@ -97,7 +97,7 @@ class HermesClient(BaseClient):
         Returns:
             list: list of model configurations
         """
-        request_url = f'{self.url}/modelconfigs'
+        request_url = f'{self.url}/v1/modelconfigs'
         data = self._make_api_request(request_url)
 
         return data
@@ -116,7 +116,7 @@ class HermesClient(BaseClient):
         """
         project = self.get_project_by_name(project_name)['oid']
 
-        request_url = f'{self.url}/projects/{project}/forecastseries'
+        request_url = f'{self.url}/v1/projects/{project}/forecastseries'
         data = self._make_api_request(request_url)
         fs = next(
             (fs for fs in data if fs['name'] == forecastseries_name),
@@ -137,7 +137,7 @@ class HermesClient(BaseClient):
         Returns:
             The ForecastSeries.
         """
-        request_url = f'{self.url}/forecastseries/{str(forecastseries_oid)}'
+        request_url = f'{self.url}/v1/forecastseries/{str(forecastseries_oid)}'
         fs = self._make_api_request(request_url)
         if fs is None:
             raise NotFound(
