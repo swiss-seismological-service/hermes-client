@@ -1,6 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 import requests
 from hydws.parser import BoreholeHydraulics
@@ -41,122 +42,77 @@ class BaseClient(ABC):
                 return response
 
 
-PROJECT_FIELDS = {
-    'oid': 'id',
-    'name': 'name',
-    'description': 'description',
-    'starttime': 'starttime',
-    'endtime': 'endtime',
-    'creationtime': 'creationtime'
-}
-
-FORECASTSERIES_FIELDS = {
-    'oid': 'id',
-    'name': 'name',
-    'starttime': 'starttime',
-    'endtime': 'endtime',
-    'creationtime': 'creationtime',
-    'forecastinterval': 'forecastinterval',
-    'status': 'status'}
-
-FORECAST_FIELDS = {
-    'oid': 'id',
-    'starttime': 'starttime',
-    'endtime': 'endtime',
-    'status': 'status',
-    'modelruns': 'modelruns'}
-
-
 class HermesClient(BaseClient):
     def __init__(self,
                  url: str,
-                 timeout: int = None) -> None:
+                 timeout: int = None):
         """
         Initialize Class.
-        :param url:     URL of the hermes webservice
-        :param timeout: after how long, contacting the webservice should
+
+        Args:
+            url:        URL of the hermes webservice
+            timeout:    after how long, contacting the webservice should
                         be aborted
         """
         self.url = f'{url}/v1'
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
 
-    def list_projects(self, details: bool = False):
+    def list_projects(self):
         """
         List all projects.
-        :return: list of projects
+
+        Returns:
+            list: list of projects
         """
         request_url = f'{self.url}/projects'
         data = self._make_api_request(request_url)
 
-        if not details:
-            for project in data:
-                project['creationtime'] = \
-                    project['creationinfo']['creationtime']
+        return data
 
-            data = [{v: d[k] for k, v in PROJECT_FIELDS.items() if k in d}
-                    for d in data]
+    def list_forecastseries(self, project: UUID | str):
+        """
+        List all ForecastSeries for a project.
+
+        Args:
+            project: oid or name of the project.
+
+        Returns:
+            All ForecastSeries for the project.
+        """
+
+        try:
+            if not isinstance(project, UUID):
+                UUID(project)
+        except ValueError:
+            request_url = f'{self.url}/projects'
+            data = self._make_api_request(request_url)
+            project = next((p['oid'] for p in data if p['name'] == project),
+                           None)
+
+        request_url = f'{self.url}/projects/{str(project)}/forecastseries'
+        data = self._make_api_request(request_url)
 
         return data
 
-    def list_forecastseries(self, project_id: int, details: bool = False):
+    def list_modelconfigs(self):
         """
-        List all forecast series for a project.
-        :param project_id: id of the project
-        :return: list of forecast series
+        List all model configurations.
+
+        Returns:
+            list: list of model configurations
         """
-        request_url = f'{self.url}/projects/{project_id}/forecastseries'
+        request_url = f'{self.url}/modelconfigs'
         data = self._make_api_request(request_url)
-
-        if not details:
-            for forecastseries in data:
-                forecastseries['creationtime'] = \
-                    forecastseries['creationinfo']['creationtime']
-
-            data = \
-                [{v: d[k] for k, v in FORECASTSERIES_FIELDS.items() if k in d}
-                    for d in data]
 
         return data
-
-    def list_forecasts(self, forecastseries_id: int, details: bool = False):
-        """
-        List all forecasts for a forecast series.
-        :param forecastseries_id: id of the forecast series
-        :return: list of forecasts
-        """
-        request_url = \
-            f'{self.url}/forecastseries/{forecastseries_id}/forecasts'
-
-        data = self._make_api_request(request_url)
-
-        if not details:
-            data = [{v: d[k] for k, v in FORECAST_FIELDS.items() if k in d}
-                    for d in data]
-        return data
-
-    def list_modelruns(self, forecast_id: int):
-        """
-        List all forecast modelruns for a forecast.
-        :param forecast_id: id of the forecast
-        :return: list of forecast modelruns
-        """
-        request_url = f'{self.url}/forecasts/{forecast_id}'
-
-        data = self._make_api_request(request_url)
-
-        modelruns = data['modelruns'] if 'modelruns' in data else []
-        for mr in modelruns:
-            for key in ('injectionplan_oid', 'modelconfig_oid', 'oid'):
-                if key in mr:
-                    mr[key.replace('oid', 'id')] = mr.pop(key)
-        return modelruns
 
 
 class ForecastSeriesClient(BaseClient):
     def __init__(self,
                  url: str,
-                 forecastseries_id: int,
+                 forecastseries: UUID | str | None = None,
+                 project: UUID | str | None = None,
                  timeout: int = None) -> None:
         """
         Initialize Class.
@@ -167,14 +123,72 @@ class ForecastSeriesClient(BaseClient):
         self.url = f'{url}/v1'
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
-        self.forecastseries_id = forecastseries_id
-        self.metadata = {}
 
-        self._set_forecastseries_data()
+        self.metadata = self._get_forecastseries_data(forecastseries, project)
 
-    def _set_forecastseries_data(self):
-        request_url = f'{self.url}/forecastseries/{self.forecastseries_id}'
-        self.metadata = self._make_api_request(request_url)
+    def _get_forecastseries_data(self,
+                                 forecastseries: UUID | str | None = None,
+                                 project: UUID | str | None = None):
+        """
+        Get a ForecastSeries.
+
+        Either the ForecastSeries UUID must be provided, or both the
+        ForecastSeries name and the project UUID or name.
+
+        Args:
+            forecastseries: oid or name of the forecast series.
+            project:        oid or name of the project.
+
+        Returns:
+            The ForecastSeries.
+        """
+        try:
+            # If forecastseries UUID is provided, directly return it.
+            if not isinstance(forecastseries, UUID):
+                UUID(forecastseries)
+            request_url = f'{self.url}/forecastseries/{str(forecastseries)}'
+            fs = self._make_api_request(request_url)
+            if len(fs.keys()) == 0:
+                raise ValueError(
+                    'ForecastSeries not found. Please provide a valid '
+                    'ForecastSeries name or UUID.')
+            return fs
+        except ValueError:
+            if project is None:
+                raise ValueError(
+                    'Either ForecastSeries UUID must be provided, or both '
+                    'the ForecastSeries name and the project UUID or name.')
+            try:
+                if not isinstance(project, UUID):
+                    UUID(project)
+                request_url = \
+                    f'{self.url}/projects/{str(project)}/forecastseries'
+                data = self._make_api_request(request_url)
+                fs = next(
+                    (fs for fs in data if fs['name'] == forecastseries),
+                    None)
+                return fs
+            except ValueError:
+                request_url = f'{self.url}/projects'
+                data = self._make_api_request(request_url)
+                project = next(
+                    (p['oid'] for p in data if p['name'] == project),
+                    None)
+                if project is None:
+                    raise ValueError(
+                        'Project not found. Please provide a valid project '
+                        'name or UUID.')
+                request_url = \
+                    f'{self.url}/projects/{str(project)}/forecastseries'
+                data = self._make_api_request(request_url)
+                fs = next(
+                    (fs for fs in data if fs['name'] == forecastseries),
+                    None)
+                if fs is None:
+                    raise ValueError(
+                        'ForecastSeries not found. Please provide a valid '
+                        'ForecastSeries name or UUID.')
+                return fs
 
     @property
     def injectionplans(self):
@@ -191,7 +205,7 @@ class ForecastSeriesClient(BaseClient):
         """
 
         request_url = f'{self.url}/forecastseries/' \
-                      f'{self.forecastseries_id}/injectionplans'
+            f'{self.forecastseries_id}/injectionplans'
 
         data = self._make_api_request(request_url)
 
@@ -217,7 +231,7 @@ class ForecastSeriesClient(BaseClient):
         """
 
         request_url = f'{self.url}/forecastseries/' \
-                      f'{self.forecastseries_id}/modelconfigs'
+            f'{self.forecastseries_id}/modelconfigs'
 
         data = self._make_api_request(request_url)
 
@@ -251,25 +265,26 @@ class ForecastSeriesClient(BaseClient):
 
         return data
 
-    def list_forecasts_info(self, details=False) -> list[dict]:
-        """
-        Get all forecasts for a forecast series.
-        :return: list of forecasts
-        """
+    # def list_forecasts_info(self, details=False) -> list[dict]:
+    #     """
+    #     Get all forecasts for a forecast series.
+    #     :return: list of forecasts
+    #     """
 
-        request_url = \
-            f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
+    #     request_url = \
+    #         f'{self.url}/forecastseries/{self.forecastseries_id}/forecasts'
 
-        data = self._make_api_request(request_url)
+    #     data = self._make_api_request(request_url)
 
-        if not details:
-            data = [{k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
+    #     if not details:
+    #         data = [
+    #             {k: d[k] for k in FORECAST_FIELDS if k in d} for d in data]
 
-        for forecast in data:
-            if 'oid' in forecast:
-                forecast['id'] = forecast.pop('oid')
+    #     for forecast in data:
+    #         if 'oid' in forecast:
+    #             forecast['id'] = forecast.pop('oid')
 
-        return data
+    #     return data
 
     def list_modelruns_info(self, forecast_id: int) -> list[dict]:
         """
