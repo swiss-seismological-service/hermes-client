@@ -16,8 +16,11 @@ license = { file = "LICENSE" }
 
 dependencies = [
     "pandas",
+    "pydantic",
     "requests",
+    "rich",
     "seismostats",
+    "shapely",
     "hydws-client @ git+https://git@gitlab.seismo.ethz.ch/indu/hydws-client.git",
 ]
 

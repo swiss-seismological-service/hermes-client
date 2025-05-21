@@ -18,6 +18,10 @@ class ClientError(RequestsError):
     """Response code not OK ({})."""
 
 
+class NotFound(RequestsError):
+    """The requested resource was not found ({})."""
+
+
 def make_request(request, url, params={}, timeout=None,
                  nocontent_codes=(204,), **kwargs):
     """

@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 
-from hermes_client.base import BaseClient
+from hermes_client.base import BaseClient, NotFound
 
 
 class HermesClient(BaseClient):
@@ -43,11 +43,12 @@ class HermesClient(BaseClient):
         """
         request_url = f'{self.url}/projects'
         data = self._make_api_request(request_url)
-        project = next((p['oid'] for p in data if p['name'] == project_name),
+        project = next((p for p in data if p['name'] == project_name),
                        None)
         if project is None:
-            raise ValueError(
-                'Project not found. Please provide a valid project name.')
+            raise NotFound(
+                f'Project with name "{project_name}" not found. '
+                'Please provide a valid project name.')
         return project
 
     def get_project(self, project_oid: UUID | str):
@@ -62,8 +63,9 @@ class HermesClient(BaseClient):
         request_url = f'{self.url}/projects/{str(project_oid)}'
         project = self._make_api_request(request_url)
         if project is None:
-            raise ValueError(
-                'Project not found. Please provide a valid UUID.')
+            raise NotFound(
+                f'Project with oid "{project_oid}" not found. '
+                'Please provide a valid UUID.')
         return project
 
     def list_forecastseries(self, project: UUID | str):
@@ -120,9 +122,9 @@ class HermesClient(BaseClient):
             (fs for fs in data if fs['name'] == forecastseries_name),
             None)
         if fs is None:
-            raise ValueError(
-                'ForecastSeries not found. Please provide a valid '
-                'ForecastSeries name.')
+            raise NotFound(
+                f'ForecastSeries with name "{forecastseries_name}" not found. '
+                'Please provide a valid ForecastSeries name.')
         return fs
 
     def get_forecastseries(self,
@@ -138,6 +140,7 @@ class HermesClient(BaseClient):
         request_url = f'{self.url}/forecastseries/{str(forecastseries_oid)}'
         fs = self._make_api_request(request_url)
         if fs is None:
-            raise ValueError(
-                'ForecastSeries not found. Please provide a valid UUID.')
+            raise NotFound(
+                f'ForecastSeries with oid "{forecastseries_oid}" not found. '
+                'Please provide a valid UUID.')
         return fs

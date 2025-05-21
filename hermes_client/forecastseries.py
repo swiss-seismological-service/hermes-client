@@ -4,29 +4,40 @@ from uuid import UUID
 from hydws.parser import BoreholeHydraulics
 from seismostats import Catalog
 
-from hermes_client.base import BaseClient
+from hermes_client.base import BaseClient, NotFound
+from hermes_client.hermes import HermesClient
+from hermes_client.schemas import ForecastSeries
 from hermes_client.utils import rates_to_seismostats
 
 
 class ForecastSeriesClient(BaseClient):
+    """
+    Client for the HERMES API to interact with ForecastSeries.
+
+    Either the ForecastSeries UUID must be provided, or both the
+    ForecastSeries name and the Project UUID or name.
+
+    Args:
+        url: Base URL of the HERMES API.
+        forecastseries: UUID or name of the ForecastSeries.
+        project: UUID or name of the Project.
+        timeout: Timeout for API requests in seconds.
+    """
+
     def __init__(self,
                  url: str,
                  forecastseries: UUID | str | None = None,
                  project: UUID | str | None = None,
                  timeout: int = None) -> None:
-        """
-        Initialize Class.
-        :param url:     URL of the hermes webservice
-        :param timeout: after how long, contacting the webservice should
-                        be aborted
-        """
         self.url = f'{url}/v1'
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
 
-        self.metadata = self._get_forecastseries_data(forecastseries, project)
+        self._metadata = self._get_forecastseries_data(
+            url, forecastseries, project)
 
     def _get_forecastseries_data(self,
+                                 url: str,
                                  forecastseries: UUID | str | None = None,
                                  project: UUID | str | None = None):
         """
@@ -36,59 +47,48 @@ class ForecastSeriesClient(BaseClient):
         ForecastSeries name and the project UUID or name.
 
         Args:
-            forecastseries: oid or name of the forecast series.
-            project:        oid or name of the project.
+            url:            Base URL of the HERMES API.
+            forecastseries: Name or oid of the ForecastSeries.
+            project:        Name or oid of the Project.
 
         Returns:
             The ForecastSeries.
         """
+        hermes = HermesClient(url=url, timeout=self._timeout)
         try:
             # If forecastseries UUID is provided, directly return it.
             if not isinstance(forecastseries, UUID):
                 UUID(forecastseries)
-            request_url = f'{self.url}/forecastseries/{str(forecastseries)}'
-            fs = self._make_api_request(request_url)
-            if len(fs.keys()) == 0:
-                raise ValueError(
-                    'ForecastSeries not found. Please provide a valid '
-                    'ForecastSeries name or UUID.')
-            return fs
+            return hermes.get_forecastseries(forecastseries)
         except ValueError:
             if project is None:
                 raise ValueError(
                     'Either ForecastSeries UUID must be provided, or both '
-                    'the ForecastSeries name and the project UUID or name.')
-            try:
-                if not isinstance(project, UUID):
-                    UUID(project)
-                request_url = \
-                    f'{self.url}/projects/{str(project)}/forecastseries'
-                data = self._make_api_request(request_url)
-                fs = next(
-                    (fs for fs in data if fs['name'] == forecastseries),
-                    None)
-                return fs
-            except ValueError:
-                request_url = f'{self.url}/projects'
-                data = self._make_api_request(request_url)
-                project = next(
-                    (p['oid'] for p in data if p['name'] == project),
-                    None)
-                if project is None:
-                    raise ValueError(
-                        'Project not found. Please provide a valid project '
-                        'name or UUID.')
-                request_url = \
-                    f'{self.url}/projects/{str(project)}/forecastseries'
-                data = self._make_api_request(request_url)
-                fs = next(
-                    (fs for fs in data if fs['name'] == forecastseries),
-                    None)
-                if fs is None:
-                    raise ValueError(
-                        'ForecastSeries not found. Please provide a valid '
-                        'ForecastSeries name or UUID.')
-                return fs
+                    'the ForecastSeries name and the Project UUID or name.')
+
+            fs_list = hermes.list_forecastseries(project)
+            if fs_list is None:
+                raise NotFound(
+                    f'No ForecastSeries found for Project "{project}". '
+                    'Please provide a valid Project name or UUID.')
+
+            fs = next((fs for fs in fs_list
+                       if fs['name'] == forecastseries), None)
+
+            if fs is None:
+                raise NotFound(
+                    f'ForecastSeries with name "{forecastseries}" for Project '
+                    f'"{project}" not found. Please provide a valid Project '
+                    'and ForecastSeries name.')
+
+            return fs
+
+    @property
+    def metadata(self):
+        """
+        Get the metadata of the ForecastSeries.
+        """
+        return ForecastSeries(**self._metadata)
 
     @property
     def injectionplans(self):
@@ -96,7 +96,7 @@ class ForecastSeriesClient(BaseClient):
         List all injection plans for a forecast series.
         :return: list of injection plans
         """
-        return self.metadata['injectionplans']
+        return self._metadata['injectionplans']
 
     def list_injectionplans(self):
         """
@@ -122,7 +122,7 @@ class ForecastSeriesClient(BaseClient):
         List all models for a forecast series.
         :return: list of models
         """
-        return self.metadata['modelconfigs']
+        return self._metadata['modelconfigs']
 
     def list_modelconfigs(self):
         """
