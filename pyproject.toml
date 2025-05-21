@@ -1,3 +1,24 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=70.0.0", "wheel>=0.43.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["hermes_client"]
+
+[project]
+name = "hermes-client"
+version = "0.1.0"
+description = "Python client library for the HERMES web service"
+readme = "README.md"
+authors = [{ name = "Nicolas Schmid", email = "nicolas.schmid@sed.ethz.ch" }]
+license = { file = "LICENSE" }
+
+dependencies = [
+    "pandas",
+    "requests",
+    "seismostats",
+    "hydws-client @ git+https://git@gitlab.seismo.ethz.ch/indu/hydws-client.git",
+]
+
+requires-python = ">=3.12"
