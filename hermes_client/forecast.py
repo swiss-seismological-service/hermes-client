@@ -83,7 +83,7 @@ class ForecastClient(BaseClient):
         List all model runs for a forecast.
         """
         if self._modelruns is None:
-            self._modelruns = [ModelRunClient(self.url, m, self._timeout)
+            self._modelruns = [ModelRunClient(self.url, m, self, self._timeout)
                                for m in self._metadata['modelruns']]
 
         return self._modelruns
@@ -134,6 +134,51 @@ class ForecastClient(BaseClient):
         """
         request_url = f'{self.url}/v1/forecasts/' \
             f'{self._metadata["oid"]}/seismicityobservation'
+
+        data = self._get(request_url)
+
+        return data
+
+    @property
+    def injectionplans(self) -> dict:
+        """
+        Get all injection plans for the forecast.
+        """
+        ips = {}
+        for ip in self._metadata['injectionplans']:
+            if 'hydraulics' not in ip:
+                ip['hydraulics'] = BoreholeHydraulics(
+                    self._get_injectionplan(ip['oid']))
+            ips[ip['name']] = ip['hydraulics']
+        return ips
+
+    def _get_injectionplan(self, oid: UUID | str) -> dict:
+        """
+        Get all injection plans for the forecast.
+        """
+        request_url = f'{self.url}/v1/injectionplans/{str(oid)}'
+
+        data = self._get(request_url)
+
+        return data
+
+    @property
+    def modelconfigs(self) -> dict:
+        """
+        Get all model configs for the forecast.
+        """
+        mcs = {}
+        for mc in self._metadata['modelconfigs']:
+            if 'modelconfig' not in mc:
+                mc['modelconfig'] = self._get_modelconfig(mc['oid'])
+            mcs[mc['name']] = mc['modelconfig']
+        return mcs
+
+    def _get_modelconfig(self, oid: UUID | str) -> dict:
+        """
+        Get all model configs for the forecast.
+        """
+        request_url = f'{self.url}/v1/modelconfigs/{str(oid)}'
 
         data = self._get(request_url)
 
