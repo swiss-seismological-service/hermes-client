@@ -92,6 +92,27 @@ class ForecastInfo(Model):
     endtime: datetime | None = None
     creationinfo: dict | None = None
 
+    injectionplans: list[str] | None = None
+    modelconfigs: list[str] | None = None
+
+    @field_validator('injectionplans', mode='before')
+    @classmethod
+    def validate_injectionplans(cls,
+                                value: list[dict] | None) -> Self:
+        if value is None:
+            return None
+        value = sorted([v['name'] for v in value])
+        return value
+
+    @field_validator('modelconfigs', mode='before')
+    @classmethod
+    def validate_modelconfigs(cls,
+                              value: list[dict] | None) -> Self:
+        if value is None:
+            return None
+        value = sorted([v['name'] for v in value])
+        return value
+
 
 class ModelRunInfo(Model):
     oid: UUID | None = None

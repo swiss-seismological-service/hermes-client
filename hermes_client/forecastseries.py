@@ -28,7 +28,7 @@ class ForecastSeriesClient(BaseClient):
                  url: str,
                  forecastseries: UUID | str | None = None,
                  project: UUID | str | None = None,
-                 timeout: int = None) -> None:
+                 timeout: int | None = None) -> None:
         self.url = url
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)

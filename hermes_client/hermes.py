@@ -7,7 +7,7 @@ from hermes_client.base import BaseClient, NotFound
 class HermesClient(BaseClient):
     def __init__(self,
                  url: str,
-                 timeout: int = None):
+                 timeout: int | None = None):
         """
         Initialize Class.
 

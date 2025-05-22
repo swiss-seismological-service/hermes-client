@@ -6,10 +6,11 @@ from hermes_client.base import BaseClient, NotFound
 from hermes_client.hermes import HermesClient
 from hermes_client.modelrun import ModelRunClient
 from hermes_client.schemas import ForecastInfo
+from hermes_client.utils import deduplicate_dict
 
 
 class ForecastClient(BaseClient):
-    def __init__(self, url: str, forecast: dict, timeout: int):
+    def __init__(self, url: str, forecast: dict, timeout: int | None = None):
         self._metadata = forecast
         self.url = url
         self._timeout = timeout
@@ -19,9 +20,29 @@ class ForecastClient(BaseClient):
 
         self._modelruns = None
 
+        self.extract_metadata()
+
     def __repr__(self):
         return f"Forecast({self.metadata.status}, " \
             f"{self.metadata.starttime}, {self.metadata.endtime})"
+
+    def extract_metadata(self):
+        """
+        Build lists of InjectionPlans and ModelConfigs which are
+        used in the model runs.
+        """
+        if 'modelruns' not in self._metadata or \
+                not self._metadata['modelruns']:
+            return None
+        mcs = []
+        ips = []
+        for mr in self._metadata['modelruns']:
+            if 'injectionplan' in mr:
+                ips.append(mr['injectionplan'])
+            if 'modelconfig' in mr:
+                mcs.append(mr['modelconfig'])
+        self._metadata['modelconfigs'] = deduplicate_dict(mcs)
+        self._metadata['injectionplans'] = deduplicate_dict(ips)
 
     @property
     def metadata(self) -> ForecastInfo:

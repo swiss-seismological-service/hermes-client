@@ -45,3 +45,14 @@ def parse_datetime(date: str):
         return datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
     except BaseException:
         return datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
+
+
+def deduplicate_dict(dict_list: list[dict]):
+    seen = set()
+    result = []
+    for d in dict_list:
+        t = tuple(sorted(d.items()))
+        if t not in seen:
+            seen.add(t)
+            result.append(d)
+    return result
