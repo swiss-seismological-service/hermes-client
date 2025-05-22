@@ -107,7 +107,8 @@ class ForecastSeriesClient(BaseClient):
         The InjectionPlans used for Forecasts.
         """
         if self._injectionplans is None:
-            self._injectionplans = self._get_injectionplans()
+            self._injectionplans = sorted(self._get_injectionplans(),
+                                          key=lambda i: i['name'])
 
         return [InjectionPlanTemplate.model_validate(i)
                 for i in self._injectionplans]
@@ -130,7 +131,9 @@ class ForecastSeriesClient(BaseClient):
         The ModelConfigs used for Forecasts.
         """
         if self._modelconfigs is None:
-            self._modelconfigs = self._get_modelconfigs()
+            self._modelconfigs = sorted(self._get_modelconfigs(),
+                                        key=lambda m: m['name'])
+
         return [ModelConfig.model_validate(m)
                 for m in self._modelconfigs]
 
