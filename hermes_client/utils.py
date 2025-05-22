@@ -8,8 +8,11 @@ def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
     """
     Convert rates from hermes to seismostats rate grid.
 
-    :param rates: rates from hermes
-    :return: seismostats rate grid
+    Args:
+        rates: List of rates from hermes.
+
+    Returns:
+        List of ForecastGRRateGrid objects.
     """
     df = pd.json_normalize(rates, sep='_')
 

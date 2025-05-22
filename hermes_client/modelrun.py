@@ -1,3 +1,5 @@
+import logging
+
 from hermes_client.base import BaseClient
 from hermes_client.schemas import ModelRunInfo
 
@@ -11,6 +13,7 @@ class ModelRunClient(BaseClient):
         self._metadata = modelrun
         self.url = url
         self._timeout = timeout
+        self.logger = logging.getLogger(__name__)
 
         self._forecast_client = forecast_client
 
