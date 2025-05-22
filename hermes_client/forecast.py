@@ -4,35 +4,15 @@ from uuid import UUID
 
 from hermes_client.base import BaseClient, NotFound
 from hermes_client.hermes import HermesClient
-from hermes_client.schemas import EStatus, ForecastInfo
+from hermes_client.modelrun import ModelRunClient
+from hermes_client.schemas import ForecastInfo
 
 
-class ModelRun(BaseClient):
-    def __init__(self, url: str, modelrun: dict):
-        self._metadata = modelrun
-        self.url = url
-
-        self.oid = modelrun['oid']
-        self.status = EStatus(modelrun['status'])
-
-    def __repr__(self):
-        return \
-            f"ModelRun({self.status}, " \
-            f"modelconfig={self._metadata['modelconfig']['name']} " \
-            f"injectionplan={self._metadata['injectionplan']['name']})"
-
-
-class Forecast(BaseClient):
-    def __init__(self, url: str, forecast: dict):
+class ForecastClient(BaseClient):
+    def __init__(self, url: str, forecast: dict, timeout: int):
         self._metadata = forecast
         self.url = url
-
-        metadata = ForecastInfo.model_validate(forecast)
-        self.oid = metadata.oid
-        self.status = metadata.status
-        self.starttime = metadata.starttime
-        self.endtime = metadata.endtime
-        self.creationinfo = metadata.creationinfo
+        self._timeout = timeout
 
         self._seismicityobservation = None
         self._injectionobservations = None
@@ -40,17 +20,25 @@ class Forecast(BaseClient):
         self._modelruns = None
 
     def __repr__(self):
-        return f"Forecast({self.status}, " \
-            f"{self.starttime}, {self.endtime})"
+        return f"Forecast({self.metadata.status}, " \
+            f"{self.metadata.starttime}, {self.metadata.endtime})"
 
     @property
-    def modelruns(self) -> list[ModelRun]:
+    def metadata(self) -> ForecastInfo:
+        """
+        Get the metadata of the forecast.
+        :return: ForecastInfo object
+        """
+        return ForecastInfo.model_validate(self._metadata)
+
+    @property
+    def modelruns(self) -> list[ModelRunClient]:
         """
         List all model runs for a forecast.
         :return: list of model runs
         """
         if self._modelruns is None:
-            self._modelruns = [ModelRun(self.url, m)
+            self._modelruns = [ModelRunClient(self.url, m, self._timeout)
                                for m in self._metadata['modelruns']]
 
         return self._modelruns
@@ -68,12 +56,11 @@ class Forecast(BaseClient):
             The Forecast object.
         """
         hermes = HermesClient(url=url)
-        forecast = hermes._make_api_request(
-            request_url=f'{url}/v1/forecasts/{oid}',
-            params={'oid': oid}
+        forecast = hermes._get(
+            request_url=f'{url}/v1/forecasts/{oid}'
         )
 
         if not forecast:
-            raise NotFound(f"Forecast with oid {oid} not found.")
+            raise NotFound(f'Forecast with oid "{oid}" not found.')
 
         return cls(url, forecast)

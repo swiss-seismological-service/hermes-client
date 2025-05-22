@@ -1,10 +1,7 @@
-import logging
 from datetime import datetime
 
 import pandas as pd
 from seismostats import ForecastGRRateGrid
-
-logger = logging.getLogger(__name__)
 
 
 def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:

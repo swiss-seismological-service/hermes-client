@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from hermes_client.base import BaseClient, NotFound
-from hermes_client.forecast import Forecast
+from hermes_client.forecast import ForecastClient
 from hermes_client.hermes import HermesClient
 from hermes_client.schemas import (ForecastSeries, InjectionPlanTemplate,
                                    ModelConfig)
@@ -118,7 +120,7 @@ class ForecastSeriesClient(BaseClient):
         request_url = f'{self.url}/v1/forecastseries/' \
             f'{self._metadata['oid']}/injectionplans'
 
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
 
         return data
 
@@ -140,18 +142,20 @@ class ForecastSeriesClient(BaseClient):
         request_url = f'{self.url}/v1/forecastseries/' \
             f'{self._metadata['oid']}/modelconfigs'
 
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
 
         return data
 
     @property
-    def forecasts(self) -> list[Forecast]:
+    def forecasts(self) -> list[ForecastClient]:
         """
         Finished or still running Forecasts.
         """
         if self._forecasts is None:
-            self._forecasts = [Forecast(self.url, f)
-                               for f in self._get_forecasts()]
+            self._forecasts = \
+                sorted([ForecastClient(self.url, f, self._timeout)
+                        for f in self._get_forecasts()],
+                       key=lambda f: f.metadata.starttime)
 
         return self._forecasts
 
@@ -163,9 +167,54 @@ class ForecastSeriesClient(BaseClient):
         request_url = f'{self.url}/v1/forecastseries/' \
             f'{self._metadata['oid']}/forecasts'
 
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
 
         return data
+
+    def get_forecast_by_time(self,
+                             time: datetime,
+                             method: Literal['nearest',
+                                             'previous', 'next'] = 'nearest',
+                             status: list[str] = ['COMPLETED']
+                             ) -> ForecastClient | None:
+        """
+        Get a forecast by its starttime.
+
+        Args:
+            time:   The time to search for.
+            method: The method to use for searching. Can be 'nearest',
+                    'previous', or 'next'.
+            status: The status of the forecast.
+
+        Returns:
+            The forecast that matches the time.
+        """
+        if self.forecasts in [None, []]:
+            return None
+
+        fc = [f for f in self.forecasts if f.metadata.status in status]
+
+        if method == 'nearest':
+            forecast = min(fc,
+                           key=lambda f: abs(f.metadata.starttime - time))
+        elif method == 'previous':
+            forecast = max(
+                (f for f in fc if f.metadata.starttime <= time),
+                key=lambda f: f.metadata.starttime,
+                default=None
+            )
+        elif method == 'next':
+            forecast = min(
+                (f for f in fc if f.metadata.starttime >= time),
+                key=lambda f: f.metadata.starttime,
+                default=None
+            )
+        else:
+            raise ValueError(
+                f"Invalid method '{method}'. "
+                "Use 'nearest', 'previous', or 'next'."
+            )
+        return forecast
 
     # def get_forecast_seismicity(self, forecast_id: int):
     #     """
@@ -176,7 +225,7 @@ class ForecastSeriesClient(BaseClient):
     #     request_url = \
     #         f'{self.url}/v1/forecasts/{forecast_id}/seismicityobservations'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     return Catalog.from_quakeml(data, include_quality=True)
 
@@ -189,7 +238,7 @@ class ForecastSeriesClient(BaseClient):
     #     request_url = \
     #         f'{self.url}/v1/forecasts/{forecast_id}/injectionobservations'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     data = [BoreholeHydraulics(d) for d in data]
 
@@ -204,7 +253,7 @@ class ForecastSeriesClient(BaseClient):
     #     request_url = \
     #         f'{self.url}/v1/forecastseries/{self.forecastseries_id}/forecasts'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     if not details:
     #         data = [
@@ -224,7 +273,7 @@ class ForecastSeriesClient(BaseClient):
     #     """
     #     request_url = f'{self.url}/v1/forecasts/{forecast_id}'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     modelruns = data['modelruns'] if 'modelruns' in data else []
     #     for mr in modelruns:
@@ -251,7 +300,7 @@ class ForecastSeriesClient(BaseClient):
     #         params['injectionplans'] = injectionplans
 
     #     request_url = f'{self.url}/v1/forecasts/{forecast_id}/rates'
-    #     data = self._make_api_request(request_url, params=params)
+    #     data = self._get(request_url, params=params)
 
     #     for modelrun in data:
     #         rategrids = rates_to_seismostats(modelrun['rateforecasts'])
@@ -267,7 +316,7 @@ class ForecastSeriesClient(BaseClient):
     #     :return: rates
     #     """
     #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/rates'
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     return rates_to_seismostats(data['rateforecasts'])
 
@@ -279,12 +328,12 @@ class ForecastSeriesClient(BaseClient):
     #     """
     #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/rates'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
     #     injectionplan_id = data['injectionplan_oid']
 
     #     request_url = f'{self.url}/v1/injectionplans/{injectionplan_id}'
 
-    #     hydws_data = self._make_api_request(request_url)
+    #     hydws_data = self._get(request_url)
 
     #     hyd = BoreholeHydraulics(hydws_data[0])
 
@@ -298,6 +347,6 @@ class ForecastSeriesClient(BaseClient):
     #     """
     #     request_url = f'{self.url}/v1/modelruns/{modelrun_id}/modelconfig'
 
-    #     data = self._make_api_request(request_url)
+    #     data = self._get(request_url)
 
     #     return data

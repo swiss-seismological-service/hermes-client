@@ -28,7 +28,7 @@ class HermesClient(BaseClient):
             list: list of projects
         """
         request_url = f'{self.url}/v1/projects'
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
 
         return data
 
@@ -42,7 +42,7 @@ class HermesClient(BaseClient):
             The project.
         """
         request_url = f'{self.url}/v1/projects'
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
         project = next((p for p in data if p['name'] == project_name),
                        None)
         if project is None:
@@ -61,11 +61,14 @@ class HermesClient(BaseClient):
             The project.
         """
         request_url = f'{self.url}/v1/projects/{str(project_oid)}'
-        project = self._make_api_request(request_url)
-        if project is None:
+
+        try:
+            project = self._get(request_url)
+        except NotFound:
             raise NotFound(
                 f'Project with oid "{project_oid}" not found. '
                 'Please provide a valid UUID.')
+
         return project
 
     def list_forecastseries(self, project: UUID | str):
@@ -86,7 +89,13 @@ class HermesClient(BaseClient):
             project = self.get_project_by_name(project)['oid']
 
         request_url = f'{self.url}/v1/projects/{str(project)}/forecastseries'
-        data = self._make_api_request(request_url)
+
+        try:
+            data = self._get(request_url)
+        except NotFound:
+            raise NotFound(
+                f'Project with oid "{project}" not found. '
+                'Please provide a valid UUID.')
 
         return data
 
@@ -98,7 +107,7 @@ class HermesClient(BaseClient):
             list: list of model configurations
         """
         request_url = f'{self.url}/v1/modelconfigs'
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
 
         return data
 
@@ -117,7 +126,7 @@ class HermesClient(BaseClient):
         project = self.get_project_by_name(project_name)['oid']
 
         request_url = f'{self.url}/v1/projects/{project}/forecastseries'
-        data = self._make_api_request(request_url)
+        data = self._get(request_url)
         fs = next(
             (fs for fs in data if fs['name'] == forecastseries_name),
             None)
@@ -138,8 +147,9 @@ class HermesClient(BaseClient):
             The ForecastSeries.
         """
         request_url = f'{self.url}/v1/forecastseries/{str(forecastseries_oid)}'
-        fs = self._make_api_request(request_url)
-        if fs is None:
+        try:
+            fs = self._get(request_url)
+        except NotFound:
             raise NotFound(
                 f'ForecastSeries with oid "{forecastseries_oid}" not found. '
                 'Please provide a valid UUID.')

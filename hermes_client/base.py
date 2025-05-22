@@ -1,9 +1,9 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Any
 
 import requests
-
-from hermes_client.utils import logger
+from requests import Response
 
 
 class RequestsError(requests.exceptions.RequestException):
@@ -22,50 +22,52 @@ class NotFound(RequestsError):
     """The requested resource was not found ({})."""
 
 
-def make_request(request, url, params={}, timeout=None,
-                 nocontent_codes=(204,), **kwargs):
-    """
-    Make a normal request
-
-    Args:
-        request: Request object to be used
-        url: URL
-        params: Dictionary of query parameters
-        timeout: Request timeout
-        nocontent_codes: List of response codes that are considered
-            "no content" (default: 204)
-        kwargs: Additional keyword arguments to be passed to the request
-            (e.g. headers, data, etc.)
-
-    Returns:
-        content of response
-
-    Raises:
-        NoContent: If the response code is in nocontent_codes
-        ClientError: If the response code is not 200
-        RequestsError: If there is a request exception
-    """
-
+def make_request(
+    method: str,
+    url: str,
+    params: dict[str, Any] | None = None,
+    data: Any | None = None,
+    json_data: Any | None = None,
+    headers: dict[str, str] | None = None,
+    timeout: float | None = None,
+    nocontent_codes: tuple[int, ...] = (204,),
+    logger: Any = None,
+    **kwargs,
+) -> bytes:
     try:
-        r = request(url, params=params, timeout=timeout, **kwargs)
+        if logger is not None:
+            logger.debug(
+                f"Sending {method} request to {url}, "
+                f"params={params}, json={json_data}")
 
-        logger.debug(f'Making request to {url} with parameters {params}')
+        response: Response = requests.request(
+            method=method.upper(),
+            url=url,
+            params=params,
+            data=data,
+            json=json_data,
+            headers=headers,
+            timeout=timeout,
+            **kwargs,
+        )
 
-        if r.status_code in nocontent_codes:
-            raise NoContent(r.url, r.status_code, response=r)
+        if response.status_code in nocontent_codes:
+            raise NoContent(
+                f"No content from {response.url} ({response.status_code})")
 
-        r.raise_for_status()
+        if response.status_code == 404:
+            raise NotFound(f"Resource not found at {response.url}")
 
-        if r.status_code != 200:
-            raise ClientError(r.status_code, response=r)
+        if not response.ok:
+            raise ClientError(
+                f"HTTP {response.status_code} error at {response.url}")
 
-        return r.content
+        return response.content
 
-    except (NoContent, ClientError) as err:
-        raise err
-
-    except requests.exceptions.RequestException as err:
-        raise RequestsError(err, response=err.response)
+    except requests.exceptions.RequestException:
+        raise
+    except Exception as e:
+        raise RequestsError(f"Request failed: {e}") from e
 
 
 class BaseClient(ABC):
@@ -73,25 +75,74 @@ class BaseClient(ABC):
     def __init__(self):
         pass
 
-    def _make_api_request(self, request_url: str, params: dict = {}):
+    def _request(
+        self,
+        method: str,
+        url: str,
+        params: dict[str, Any] | None = None,
+        data: Any | None = None,
+        json_data: Any | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
         try:
-            response = make_request(
-                requests.get,
-                request_url,
-                params,
-                self._timeout,
-                nocontent_codes=(204,))
+            raw = make_request(
+                method=method,
+                url=url,
+                params=params,
+                data=data,
+                json_data=json_data,
+                headers=headers,
+                timeout=self._timeout,
+                nocontent_codes=(204,),
+                logger=self.logger,
+            )
+            self.logger.debug(f"{method.upper()} successful for {url}")
+
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                self.logger.debug(
+                    "Non-JSON response returned as raw content.")
+                return raw
 
         except NoContent:
-            self.logger.warning('No data received.')
+            self.logger.debug(f"No content received from {url}.")
             return {}
+
+        except NotFound as err:
+            self.logger.error(f"Not Found: {err}")
+            raise
+
         except RequestsError as err:
-            self.logger.error(f"Request Error while fetching data ({err}).")
-        except BaseException as err:
-            self.logger.error(f"Error while fetching data {err}")
-        else:
-            self.logger.info('Data received.')
-            try:
-                return json.loads(response)
-            except json.JSONDecodeError:
-                return response
+            self.logger.error(f"Request failed: {err}")
+            raise
+
+        except Exception as err:
+            self.logger.exception(
+                f"Unexpected error during {method.upper()} "
+                f"request to {url}: {err}")
+            raise
+
+    def _get(self,
+             url: str,
+             params: dict[str, Any] | None = None,
+             headers: dict[str, str] | None = None) -> Any:
+        return self._request("GET", url, params=params, headers=headers)
+
+    def _post(self,
+              url: str,
+              json_data: Any | None = None,
+              headers: dict[str, str] | None = None) -> Any:
+        return self._request("POST", url, json_data=json_data, headers=headers)
+
+    def _put(self,
+             url: str,
+             json_data: Any | None = None,
+             headers: dict[str, str] | None = None) -> Any:
+        return self._request("PUT", url, json_data=json_data, headers=headers)
+
+    def _delete(self,
+                url: str,
+                params: dict[str, Any] | None = None,
+                headers: dict[str, str] | None = None) -> Any:
+        return self._request("DELETE", url, params=params, headers=headers)
