@@ -77,7 +77,7 @@ class ModelRunClient(BaseClient):
             mc = self._get_modelconfig()
             self._modelconfig = mc if mc else None
 
-        return self._modelconfig
+        return self._modelconfig.copy()
 
     @property
     def _get_modelconfig(self) -> dict:

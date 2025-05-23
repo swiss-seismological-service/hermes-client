@@ -99,7 +99,7 @@ class ForecastSeriesClient(BaseClient):
         """
         Model settings which are passed to all models.
         """
-        return self._metadata['model_settings']
+        return self._metadata['model_settings'].copy()
 
     @property
     def injectionplans(self):

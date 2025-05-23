@@ -36,6 +36,10 @@ class ForecastSeries(Model):
     injectionplans: list[str] | None = None
     modelconfigs: list[str] | None = None
 
+    observation_starttime: datetime | None = None
+    observation_endtime: datetime | None = None
+    observation_window: int | None = None
+
     @field_validator('bounding_polygon', mode='before')
     @classmethod
     def validate_bounding_polygon(cls, value: str) -> Self:

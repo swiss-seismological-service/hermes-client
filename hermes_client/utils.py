@@ -1,10 +1,11 @@
+import io
 from datetime import datetime
 
 import pandas as pd
 from seismostats import ForecastGRRateGrid
 
 
-def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
+def deserialize_rates(rates: bytes) -> list[ForecastGRRateGrid]:
     """
     Convert rates from hermes to seismostats rate grid.
 
@@ -14,23 +15,20 @@ def rates_to_seismostats(rates: list) -> ForecastGRRateGrid:
     Returns:
         List of ForecastGRRateGrid objects.
     """
-    df = pd.json_normalize(rates, sep='_')
+    rates = pd.read_csv(io.StringIO(rates.decode('utf-8')))
 
-    df.columns = df.columns.str.replace(
-        "_value", "")
+    rates['starttime'] = pd.to_datetime(rates['starttime'])
+    rates['endtime'] = pd.to_datetime(rates['endtime'])
+    rates = rates.rename(columns={'realization_id': 'grid_id'})
 
-    df['starttime'] = pd.to_datetime(df['starttime'])
-    df['endtime'] = pd.to_datetime(df['endtime'])
-    df = df.rename(columns={'realization_id': 'grid_id'})
+    if 'mc' not in rates.columns:
+        rates['mc'] = pd.NA
+    if 'a' not in rates.columns:
+        rates['a'] = pd.NA
+    if 'b' not in rates.columns:
+        rates['b'] = pd.NA
 
-    if 'mc' not in df.columns:
-        df['mc'] = pd.NA
-    if 'a' not in df.columns:
-        df['a'] = pd.NA
-    if 'b' not in df.columns:
-        df['b'] = pd.NA
-
-    grouped = df.groupby(['starttime', 'endtime'])
+    grouped = rates.groupby(['starttime', 'endtime'])
 
     grids = []
     for times, group in grouped:
