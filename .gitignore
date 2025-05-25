@@ -4,6 +4,8 @@ node_modules/
 dist/
 test.py
 ATLS_visualisation_concept.ipynb
+docs/*/api/
+docs/source/changelog.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -40,7 +40,23 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-dev = ["pytest", "isort", "pytest-cov", "tox", "flake8", "responses"]
+dev = [
+    "build",
+    "docutils==0.19",
+    "flake8",
+    "isort",
+    "myst-parser",
+    "pandoc",
+    "pydata-sphinx-theme",
+    "pytest-cov",
+    "pytest",
+    "responses",
+    "setuptools-scm",
+    "sphinx-autobuild",
+    "sphinx",
+    "tox",
+    "twine",
+]
 
 
 [project.urls]
