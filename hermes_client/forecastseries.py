@@ -26,7 +26,7 @@ class ForecastSeriesClient(BaseClient):
 
     def __init__(self,
                  url: str,
-                 forecastseries: UUID | str | None = None,
+                 forecastseries: UUID | str,
                  project: UUID | str | None = None,
                  timeout: int | None = None) -> None:
         self.url = url
@@ -42,7 +42,7 @@ class ForecastSeriesClient(BaseClient):
 
     def _get_forecastseries(self,
                             url: str,
-                            forecastseries: UUID | str | None = None,
+                            forecastseries: UUID | str,
                             project: UUID | str | None = None):
         """
         Get a ForecastSeries.
@@ -71,11 +71,6 @@ class ForecastSeriesClient(BaseClient):
                     'the ForecastSeries name and the Project UUID or name.')
 
             fs_list = hermes.list_forecastseries(project)
-            if fs_list is None:
-                raise NotFound(
-                    f'No ForecastSeries found for Project "{project}". '
-                    'Please provide a valid Project name or UUID.')
-
             fs = next((fs for fs in fs_list
                        if fs['name'] == forecastseries), None)
 

@@ -1,0 +1,40 @@
+[
+    {
+        "oid": "7a3449d2-fd78-4cfe-ac10-579620aab2c7",
+        "name": "double",
+        "borehole_hydraulics": {
+            "borehole_name": "16A-32",
+            "section_name": "16A-32/section_03",
+            "type": "multiply",
+            "resolution": 60,
+            "config": {
+                "plan": {
+                    "topflow": {
+                        "value": 2
+                    }
+                },
+                "lookback_window": 5,
+                "mode": "mean"
+            }
+        }
+    },
+    {
+        "oid": "9aff0d69-2755-48ba-8286-01cf028d32a4",
+        "name": "constant",
+        "borehole_hydraulics": {
+            "borehole_name": "16A-32",
+            "section_name": "16A-32/section_03",
+            "type": "multiply",
+            "resolution": 60,
+            "config": {
+                "plan": {
+                    "topflow": {
+                        "value": 1
+                    }
+                },
+                "lookback_window": 5,
+                "mode": "mean"
+            }
+        }
+    }
+]

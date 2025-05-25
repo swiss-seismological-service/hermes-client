@@ -1,0 +1,48 @@
+[
+    {
+        "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+        "name": "em1",
+        "enabled": true,
+        "description": "EM1",
+        "result_type": "GRID",
+        "sfm_module": "em1.hermes",
+        "sfm_function": "run_em1_validated",
+        "last_modified": "2025-05-22T16:52:09",
+        "model_parameters": {
+            "b_value": 1,
+            "afb": -2,
+            "Tau": 60,
+            "dM": 0.05,
+            "Mc": null,
+            "tau_force": false,
+            "Nsim": 100,
+            "mode": "MLE"
+        },
+        "tags": [
+            "test"
+        ]
+    },
+    {
+        "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+        "name": "em1_2",
+        "enabled": true,
+        "description": "EM1_2",
+        "result_type": "GRID",
+        "sfm_module": "em1.hermes",
+        "sfm_function": "run_em1_validated",
+        "last_modified": "2025-05-22T16:52:16",
+        "model_parameters": {
+            "b_value": 1,
+            "afb": -2,
+            "Tau": 60,
+            "dM": 0.05,
+            "Mc": null,
+            "tau_force": false,
+            "Nsim": 100,
+            "mode": "MLE"
+        },
+        "tags": [
+            "test"
+        ]
+    }
+]

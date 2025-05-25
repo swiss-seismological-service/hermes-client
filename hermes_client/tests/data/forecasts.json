@@ -1,0 +1,209 @@
+[
+    {
+        "oid": "5035f855-7abc-4e5f-8462-174da91b9ff6",
+        "status": "COMPLETED",
+        "starttime": "2022-04-21T15:00:00",
+        "endtime": "2022-04-21T18:00:00",
+        "seismicityobservation": {
+            "oid": "78118934-0865-46c5-8c61-7e00be2a9d6b"
+        },
+        "injectionobservation": {
+            "oid": "4e374bd1-2f2c-4692-82a9-42b3257ddd37"
+        },
+        "modelruns": [
+            {
+                "oid": "135a766f-734d-4260-b846-12cab7397e1c",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "c6840a49-b833-4046-88bd-306369e28eb1",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "50d8f1a8-ebbf-42d1-877f-f68c8a18bba5",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "c19255d7-9357-4326-aa16-c742e1cd778e",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "76245b93-a206-4bad-a0bd-08a4739a354e",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "c6840a49-b833-4046-88bd-306369e28eb1",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "8ae541b4-2553-4f6c-8d03-609ba49d792c",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "c19255d7-9357-4326-aa16-c742e1cd778e",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            }
+        ],
+        "creationinfo": {
+            "creationtime": "2025-05-22T16:52:22"
+        }
+    },
+    {
+        "oid": "43511523-fa15-4b9e-ae0e-141ffbe6ea15",
+        "status": "COMPLETED",
+        "starttime": "2022-04-21T16:00:00",
+        "endtime": "2022-04-21T18:00:00",
+        "seismicityobservation": {
+            "oid": "15eefe56-2de7-4302-bfaf-a219fb340850"
+        },
+        "injectionobservation": {
+            "oid": "aff5946a-d9f9-4168-a6aa-4140b04599a0"
+        },
+        "modelruns": [
+            {
+                "oid": "f669d8c0-f6c7-46e5-911c-3fcffe7a68b5",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "ae4f939c-f2d8-4563-9067-72dc9c04e438",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "4dc06bc2-03a7-4033-88dd-2b18537bc2f1",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "6f7cfbd4-a148-4e91-9cca-c1710be75248",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "fbf34d31-4012-428f-89dd-277bfbbecdbe",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "ae4f939c-f2d8-4563-9067-72dc9c04e438",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "921bde91-a20c-4e3f-8048-d46dba13fbe6",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "6f7cfbd4-a148-4e91-9cca-c1710be75248",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            }
+        ],
+        "creationinfo": {
+            "creationtime": "2025-05-22T16:52:48"
+        }
+    },
+    {
+        "oid": "4df69399-485a-4b8a-8366-609721aa8184",
+        "status": "COMPLETED",
+        "starttime": "2022-04-21T17:00:00",
+        "endtime": "2022-04-21T18:00:00",
+        "seismicityobservation": {
+            "oid": "257f98a6-7511-4bc1-9dd4-b3b54003c4e2"
+        },
+        "injectionobservation": {
+            "oid": "13c5fb18-06c1-4e7f-83ff-de5155220d35"
+        },
+        "modelruns": [
+            {
+                "oid": "6783d751-705f-4bfb-acf5-317fe3b94047",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "05ea419e-daae-4967-932b-a1e0f0059639",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "c11b1e53-fb2f-41d0-8539-4384e1442fbc",
+                "modelconfig": {
+                    "oid": "dc411fce-f4a1-43b5-b28f-356330b7078d",
+                    "name": "em1",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "0a05bc4a-17f8-4d80-80c8-c907dd82e439",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "f2aa1607-8158-479c-a022-ed4716e8e580",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "05ea419e-daae-4967-932b-a1e0f0059639",
+                    "name": "double"
+                },
+                "status": "COMPLETED"
+            },
+            {
+                "oid": "5fb65118-dd3d-4016-839a-5249ea66fbd0",
+                "modelconfig": {
+                    "oid": "795acc09-1e60-4a22-bf5e-710e7deec970",
+                    "name": "em1_2",
+                    "result_type": "GRID"
+                },
+                "injectionplan": {
+                    "oid": "0a05bc4a-17f8-4d80-80c8-c907dd82e439",
+                    "name": "constant"
+                },
+                "status": "COMPLETED"
+            }
+        ],
+        "creationinfo": {
+            "creationtime": "2025-05-22T16:53:17"
+        }
+    }
+]
