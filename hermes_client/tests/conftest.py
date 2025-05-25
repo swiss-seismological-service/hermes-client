@@ -74,6 +74,19 @@ def api_responses(base_url,
 
         rsps.add(
             responses.GET,
+            f"{base_url}/v1/projects/{project_ind['oid']}",
+            json=project_ind,
+            status=200
+        )
+
+        rsps.add(
+            responses.GET,
+            f"{base_url}/v1/projects/{proj2_ind_oid}",
+            status=404
+        )
+
+        rsps.add(
+            responses.GET,
             f"{base_url}/v1/projects/{project_ind['oid']}/forecastseries",
             json=[fs_ind],
             status=200
@@ -91,6 +104,12 @@ def api_responses(base_url,
             f"{base_url}/v1/forecastseries/{fs_ind['oid']}",
             json=fs_ind,
             status=200
+        )
+
+        rsps.add(
+            responses.GET,
+            f"{base_url}/v1/forecastseries/{proj2_ind_oid}",
+            status=404
         )
 
         rsps.add(
