@@ -1,7 +1,7 @@
 # API Documentation
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
 hermes_client
 forecastseries_client
