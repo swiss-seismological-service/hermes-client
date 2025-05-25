@@ -1,4 +1,4 @@
-{{ fullname.replace("seismostats.", "") | escape | underline}}
+{{ fullname.replace("hermes_client.", "") | escape | underline}}
 
 .. currentmodule:: {{ module }}
 

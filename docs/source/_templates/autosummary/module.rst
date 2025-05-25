@@ -1,4 +1,4 @@
-{{ fullname | escape | underline}}
+{{ fullname.replace("hermes_client.", "") | escape | underline}}
 
 .. automodule:: {{ fullname }}
 
