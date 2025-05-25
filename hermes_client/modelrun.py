@@ -58,7 +58,7 @@ class ModelRunClient(BaseClient):
         Get all injection plans for the forecast.
         """
         request_url = f'{self.url}/v1/modelruns/' \
-            f'{self._metadata['oid']}/injectionplan'
+            f'{self._metadata["oid"]}/injectionplan'
 
         data = self._get(request_url)
 
@@ -85,7 +85,7 @@ class ModelRunClient(BaseClient):
         Get all model configs for the forecast.
         """
         request_url = f'{self.url}/v1/modelruns/' \
-            f'{self._metadata['oid']}/modelconfig'
+            f'{self._metadata["oid"]}/modelconfig'
 
         data = self._get(request_url)
 

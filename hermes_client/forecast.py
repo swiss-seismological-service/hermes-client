@@ -1,5 +1,4 @@
 import logging
-from typing import Self
 from uuid import UUID
 
 from hydws.parser import BoreholeHydraulics
@@ -31,7 +30,7 @@ class ForecastClient(BaseClient):
             f"{self.metadata.starttime}, {self.metadata.endtime})"
 
     @classmethod
-    def from_oid(cls, url: str, oid: UUID | str) -> Self:
+    def from_oid(cls, url: str, oid: UUID | str):
         """
         Create a Forecast object from an oid.
 

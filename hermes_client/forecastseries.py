@@ -114,7 +114,7 @@ class ForecastSeriesClient(BaseClient):
         """
 
         request_url = f'{self.url}/v1/forecastseries/' \
-            f'{self._metadata['oid']}/injectionplans'
+            f'{self._metadata["oid"]}/injectionplans'
 
         data = self._get(request_url)
 
@@ -138,7 +138,7 @@ class ForecastSeriesClient(BaseClient):
         """
 
         request_url = f'{self.url}/v1/forecastseries/' \
-            f'{self._metadata['oid']}/modelconfigs'
+            f'{self._metadata["oid"]}/modelconfigs'
 
         data = self._get(request_url)
 
@@ -163,7 +163,7 @@ class ForecastSeriesClient(BaseClient):
         """
 
         request_url = f'{self.url}/v1/forecastseries/' \
-            f'{self._metadata['oid']}/forecasts'
+            f'{self._metadata["oid"]}/forecasts'
 
         data = self._get(request_url)
 

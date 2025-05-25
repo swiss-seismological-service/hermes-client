@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Self
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -42,7 +42,7 @@ class ForecastSeries(Model):
 
     @field_validator('bounding_polygon', mode='before')
     @classmethod
-    def validate_bounding_polygon(cls, value: str) -> Self:
+    def validate_bounding_polygon(cls, value: str):
         if isinstance(value, str):
             return from_wkt(value)
         return value
@@ -50,7 +50,7 @@ class ForecastSeries(Model):
     @field_validator('injectionplans', mode='before')
     @classmethod
     def validate_injectionplans(cls,
-                                value: list[dict] | None) -> Self:
+                                value: list[dict] | None):
         if value is None:
             return None
         value = sorted([v['name'] for v in value])
@@ -59,7 +59,7 @@ class ForecastSeries(Model):
     @field_validator('modelconfigs', mode='before')
     @classmethod
     def validate_modelconfigs(cls,
-                              value: list[dict] | None) -> Self:
+                              value: list[dict] | None):
         if value is None:
             return None
         value = sorted([v['name'] for v in value])
@@ -102,7 +102,7 @@ class ForecastInfo(Model):
     @field_validator('injectionplans', mode='before')
     @classmethod
     def validate_injectionplans(cls,
-                                value: list[dict] | None) -> Self:
+                                value: list[dict] | None):
         if value is None:
             return None
         value = sorted([v['name'] for v in value])
@@ -111,7 +111,7 @@ class ForecastInfo(Model):
     @field_validator('modelconfigs', mode='before')
     @classmethod
     def validate_modelconfigs(cls,
-                              value: list[dict] | None) -> Self:
+                              value: list[dict] | None):
         if value is None:
             return None
         value = sorted([v['name'] for v in value])
@@ -128,7 +128,7 @@ class ModelRunInfo(Model):
     @field_validator('injectionplan', mode='before')
     @classmethod
     def validate_injectionplan(cls,
-                               value: dict | None) -> Self:
+                               value: dict | None):
         if value is None:
             return None
         value = value['name']
@@ -137,7 +137,7 @@ class ModelRunInfo(Model):
     @field_validator('modelconfig', mode='before')
     @classmethod
     def validate_modelconfig(cls,
-                             value: dict | None) -> Self:
+                             value: dict | None):
         if value is None:
             return None
         value = value['name']
