@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from hydws.parser import BoreholeHydraulics
 
@@ -7,6 +8,26 @@ from hermes_client.schemas import ModelRunInfo
 
 
 class ModelRunClient(BaseClient):
+    """
+    Client to interact with ModelRuns in the HERMES API.
+
+    This object allows access to the metadata of the ModelRun,
+    as well as the input data and the results of the ModelRun.
+
+    Usually automatically created by the
+    :func:`~hermes_client.forecast.ForecastClient`,
+    can however also be created directly using a ModelRun UUID
+    by using the :func:`hermes_client.forecast.ForecastClient.from_oid`
+    class method.
+
+    Args:
+        url: Base URL of the HERMES API.
+        modelrun: The ModelRun metadata as a dictionary.
+        forecast_client: Optional ForecastClient to use for fetching
+            injection plans and model configs.
+        timeout: Timeout for API requests in seconds.
+    """
+
     def __init__(self,
                  url: str,
                  modelrun: dict,
@@ -29,6 +50,18 @@ class ModelRunClient(BaseClient):
             f"ModelRun({self.metadata.status}, " \
             f"modelconfig={self.metadata.modelconfig}, " \
             f"injectionplan={self.metadata.injectionplan})"
+
+    @classmethod
+    def from_oid(cls, url: str, oid: UUID | str):
+        """
+        Create a :func:`~hermes_client.modelrun.ModelRunClient`
+        object from its oid.
+
+        Args:
+            url: Base URL of the HERMES API.
+            oid: UUID of the ModelRun.
+        """
+        raise NotImplementedError
 
     @property
     def metadata(self) -> dict:

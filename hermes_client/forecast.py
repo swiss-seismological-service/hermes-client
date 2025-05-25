@@ -12,6 +12,25 @@ from hermes_client.utils import deduplicate_dict, deserialize_rates
 
 
 class ForecastClient(BaseClient):
+    '''
+    Client to interact with Forecasts in the HERMES API.
+
+    This object allows access to all the inputs of the Forecast,
+    as well as the data linked to the ModelRuns of this specific
+    Forecast.
+
+    Usually automatically created by the
+    :func:`~hermes_client.forecastseries.ForecastSeriesClient`,
+    can however also be created directly using a Forecast UUID
+    by using the :func:`~hermes_client.forecast.ForecastClient.from_oid`
+    class method.
+
+    Args:
+        url: Base URL of the HERMES API.
+        forecast: The Forecast metadata as a dictionary.
+        timeout: Timeout for API requests in seconds.
+    '''
+
     def __init__(self, url: str, forecast: dict, timeout: int | None = None):
         self._metadata = forecast
         self.url = url
@@ -23,7 +42,7 @@ class ForecastClient(BaseClient):
 
         self._modelruns = None
 
-        self.extract_metadata()
+        self._extract_metadata()
 
     def __repr__(self):
         return f"Forecast({self.metadata.status}, " \
@@ -32,11 +51,12 @@ class ForecastClient(BaseClient):
     @classmethod
     def from_oid(cls, url: str, oid: UUID | str):
         """
-        Create a Forecast object from an oid.
+        Create a :func:`~hermes_client.forecast.ForecastClient`
+        object from its oid.
 
         Args:
             url: Base URL of the HERMES API.
-            oid: UUID or string representation of the Forecast oid.
+            oid: UUID of the Forecast.
 
         Returns:
             The Forecast object.
@@ -51,7 +71,7 @@ class ForecastClient(BaseClient):
 
         return cls(url, forecast)
 
-    def extract_metadata(self):
+    def _extract_metadata(self):
         """
         Build lists of InjectionPlans and ModelConfigs which are
         used in the model runs.
@@ -72,14 +92,15 @@ class ForecastClient(BaseClient):
     @property
     def metadata(self) -> ForecastInfo:
         """
-        Get the metadata of the forecast.
+        Metadata of the Forecast.
         """
         return ForecastInfo.model_validate(self._metadata)
 
     @property
     def modelruns(self) -> list[ModelRunClient]:
         """
-        List all model runs for a forecast.
+        Model run data as :func:`~hermes_client.modelrun.ModelRunClient`
+        objects.
         """
         if self._modelruns is None:
             self._modelruns = [ModelRunClient(self.url, m, self, self._timeout)
@@ -90,7 +111,7 @@ class ForecastClient(BaseClient):
     @property
     def injectionobservations(self) -> list[dict]:
         """
-        Get the injection observations for a forecast.
+        InjectionObservations used in the Forecast.
         """
         if self._injectionobservations is None:
             ips = self._get_injectionobservations()
@@ -118,7 +139,7 @@ class ForecastClient(BaseClient):
     @property
     def seismicityobservation(self) -> Catalog:
         """
-        Get the seismicity observations for a forecast.
+        Seismicity observations use din the Forecast.
         """
         if self._seismicityobservation is None:
             so = self._get_seismicityobservation()
@@ -141,7 +162,7 @@ class ForecastClient(BaseClient):
     @property
     def injectionplans(self) -> dict:
         """
-        Get all injection plans for the forecast.
+        Injection plans used in the Forecast.
         """
         ips = {}
         for ip in self._metadata['injectionplans']:
@@ -164,7 +185,7 @@ class ForecastClient(BaseClient):
     @property
     def modelconfigs(self) -> dict:
         """
-        Get all model configs for the forecast.
+        Model configs used in the Forecast.
         """
         mcs = {}
         for mc in self._metadata['modelconfigs']:
@@ -188,7 +209,7 @@ class ForecastClient(BaseClient):
                     injectionplan: str | None = None) \
             -> list[ForecastCatalog] | list[ForecastGRRateGrid] | None:
         """
-        Get the results for a model run.
+        Get the results for a model run as a Catalog or Grid object.
 
         Args:
             modelconfig:    The name of the ModelConfig for which

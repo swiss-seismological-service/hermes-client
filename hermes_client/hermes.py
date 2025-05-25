@@ -5,17 +5,18 @@ from hermes_client.base import BaseClient, NotFound
 
 
 class HermesClient(BaseClient):
+    """
+    Client for the HERMES API to browse Project
+    and ForecastSeries metadata as raw JSON data.
+
+    Args:
+        url: Base URL of the HERMES API.
+        timeout: Timeout for API requests in seconds.
+    """
+
     def __init__(self,
                  url: str,
                  timeout: int | None = None):
-        """
-        Initialize Class.
-
-        Args:
-            url:        URL of the hermes webservice
-            timeout:    after how long, contacting the webservice should
-                        be aborted
-        """
         self.url = url
         self._timeout = timeout
         self.logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class HermesClient(BaseClient):
         List all projects.
 
         Returns:
-            list: list of projects
+            projects: List of all projects.
         """
         request_url = f'{self.url}/v1/projects'
         data = self._get(request_url)
@@ -34,12 +35,12 @@ class HermesClient(BaseClient):
 
     def get_project_by_name(self, project_name: str):
         """
-        Get a project by name.
+        Get a project by its name.
 
         Args:
             project_name: name of the project.
         Returns:
-            The project.
+            project: The project JSON data.
         """
         request_url = f'{self.url}/v1/projects'
         data = self._get(request_url)
@@ -53,12 +54,12 @@ class HermesClient(BaseClient):
 
     def get_project(self, project_oid: UUID | str):
         """
-        Get a project by oid.
+        Get a project by its oid.
 
         Args:
             project_oid: oid of the project.
         Returns:
-            The project.
+            project: Project JSON data.
         """
         request_url = f'{self.url}/v1/projects/{str(project_oid)}'
 
@@ -73,13 +74,13 @@ class HermesClient(BaseClient):
 
     def list_forecastseries(self, project: UUID | str):
         """
-        List all ForecastSeries for a project.
+        List all ForecastSeries of a project.
 
         Args:
             project: oid or name of the project.
 
         Returns:
-            All ForecastSeries for the project.
+            forecastseries: All ForecastSeries of the project.
         """
 
         try:
@@ -104,7 +105,7 @@ class HermesClient(BaseClient):
         List all model configurations.
 
         Returns:
-            list: list of model configurations
+            configs: All model configurations.
         """
         request_url = f'{self.url}/v1/modelconfigs'
         data = self._get(request_url)
@@ -121,7 +122,7 @@ class HermesClient(BaseClient):
             project_name: name of the project.
             forecastseries_name: name of the forecast series.
         Returns:
-            The ForecastSeries.
+            forecastseries: The ForecastSeries JSON data.
         """
         project = self.get_project_by_name(project_name)['oid']
 
@@ -144,7 +145,7 @@ class HermesClient(BaseClient):
         Args:
             forecastseries_oid: oid of the forecast series.
         Returns:
-            The ForecastSeries.
+            forecastseries: The ForecastSeries JSON data.
         """
         request_url = f'{self.url}/v1/forecastseries/{str(forecastseries_oid)}'
         try:

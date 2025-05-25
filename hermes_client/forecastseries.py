@@ -14,6 +14,9 @@ class ForecastSeriesClient(BaseClient):
     """
     Client for the HERMES API to interact with ForecastSeries.
 
+    Used to access all the metadata of a ForecastSeries and the
+    Forecasts linked to it.
+
     Either the ForecastSeries UUID must be provided, or both the
     ForecastSeries name and the Project UUID or name.
 
@@ -85,14 +88,14 @@ class ForecastSeriesClient(BaseClient):
     @property
     def metadata(self) -> ForecastSeries:
         """
-        General metadata of the ForecastSeries.
+        Metadata of the ForecastSeries.
         """
         return ForecastSeries(**self._metadata)
 
     @property
     def modelsettings(self) -> dict:
         """
-        Model settings which are passed to all models.
+        The general model settings.
         """
         return self._metadata['model_settings'].copy()
 
@@ -147,7 +150,8 @@ class ForecastSeriesClient(BaseClient):
     @property
     def forecasts(self) -> list[ForecastClient]:
         """
-        Finished or still running Forecasts.
+        All finished or still running Forecasts as
+        :func:`~hermes_client.forecast.ForecastClient` objects.
         """
         if self._forecasts is None:
             self._forecasts = \
@@ -176,7 +180,7 @@ class ForecastSeriesClient(BaseClient):
                              status: list[str] = ['COMPLETED']
                              ) -> ForecastClient | None:
         """
-        Get a forecast by its starttime.
+        Get a specific forecast by its starttime.
 
         Args:
             time:   The time to search for.
