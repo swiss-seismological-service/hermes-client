@@ -60,7 +60,7 @@ dev = [
 
 
 [project.urls]
-Documentation = "https://github.com/swiss-seismological-service/hermes-client"
+Documentation = "https://hermes-client.readthedocs.io/"
 Repository = "https://github.com/swiss-seismological-service/hermes-client"
 Issues = "https://github.com/swiss-seismological-service/hermes-client/issues"
 
