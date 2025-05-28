@@ -8,7 +8,7 @@ from hermes_client.base import BaseClient, NotFound
 from hermes_client.hermes import HermesClient
 from hermes_client.modelrun import ModelRunClient
 from hermes_client.schemas import ForecastInfo
-from hermes_client.utils import deduplicate_dict, deserialize_rates
+from hermes_client.utils import deduplicate_dict
 
 
 class ForecastClient(BaseClient):
@@ -224,71 +224,24 @@ class ForecastClient(BaseClient):
             - For result_type 'CATALOG', for each timestep and
               grid cell a ForecastCatalog object is returned.
         """
-        if not self._metadata['modelruns']:
+
+        if not self.modelruns:
             return None
 
-        run = self._metadata['modelruns']
-
         if injectionplan is not None:
-            if not any(('injectionplan' in m for m in run)):
+            if not any(('injectionplan' in m._metadata for
+                        m in self.modelruns)):
                 raise ValueError('ModelRuns do not have injection plans.')
 
-            run = [m for m in run if 'injectionplan' in m
-                   and m['injectionplan']['name'] == injectionplan]
+            run = [m for m in self.modelruns if 'injectionplan' in m._metadata
+                   and m._metadata['injectionplan']['name'] == injectionplan]
 
-        run = next((m for m in run if m['modelconfig']['name'] == modelconfig),
+        run = next((m for m in self.modelruns
+                    if m._metadata['modelconfig']['name'] == modelconfig),
                    None)
 
         if run is None:
             raise ValueError(f'ModelRun with ModelConfig "{modelconfig}" '
                              f'and InjectionPlan "{injectionplan}" not found.')
 
-        return self._get_results(run['oid'])
-
-    def _get_results(self, oid: UUID | str) \
-            -> list[ForecastCatalog] | list[ForecastGRRateGrid] | None:
-        """
-        Get the results for a model run by its oid.
-
-        Args:
-            oid: The oid of the model run.
-        Returns:
-            The results for the model run.
-        """
-
-        run = next((m for m in self._metadata['modelruns']
-                   if m['oid'] == oid), None)
-        if run is None:
-            raise ValueError(f'ModelRun with oid "{oid}" not found.')
-
-        if 'results' not in run:
-            run['results'] = self._get_modelrun_results(oid)
-
-            if run['modelconfig']['result_type'] == 'GRID':
-                run['results'] = deserialize_rates(run['results'])
-
-            elif run['modelconfig']['result_type'] == 'CATALOG':
-                raise NotImplementedError(
-                    'Catalog results are not yet implemented.')
-
-            elif run['modelconfig']['result_type'] == 'BINS':
-                raise NotImplementedError(
-                    'MagnitudeBins results are not yet implemented.')
-
-        return run['results'].copy()
-
-    def _get_modelrun_results(self, oid: UUID | str) -> dict:
-        """
-        Get the results for a model run.
-
-        Args:
-            oid: The oid of the model run.
-
-        Returns:
-            The results for the model run.
-        """
-        request_url = f'{self.url}/v1/modelruns/{str(oid)}/results'
-
-        data = self._get(request_url)
-
-        return data
+        return run.get_results()

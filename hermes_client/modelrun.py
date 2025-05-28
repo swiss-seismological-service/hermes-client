@@ -2,9 +2,12 @@ import logging
 from uuid import UUID
 
 from hydws.parser import BoreholeHydraulics
+from seismostats import ForecastCatalog, ForecastGRRateGrid
 
 from hermes_client.base import BaseClient
+from hermes_client.hermes import HermesClient
 from hermes_client.schemas import ModelRunInfo
+from hermes_client.utils import deserialize_rates
 
 
 class ModelRunClient(BaseClient):
@@ -44,6 +47,7 @@ class ModelRunClient(BaseClient):
         self._forecast_client = forecast_client
         self._injectionplan = None
         self._modelconfig = None
+        self._results = None
 
     def __repr__(self):
         return \
@@ -61,7 +65,14 @@ class ModelRunClient(BaseClient):
             url: Base URL of the HERMES API.
             oid: UUID of the ModelRun.
         """
-        raise NotImplementedError
+        hermes = HermesClient(url=url)
+        modelrun = hermes._get(
+            f'{url}/v1/modelruns/{oid}')
+
+        if not modelrun:
+            raise ValueError(f'ModelRun with oid {oid} not found.')
+
+        return cls(url, modelrun)
 
     @property
     def metadata(self) -> dict:
@@ -80,7 +91,6 @@ class ModelRunClient(BaseClient):
                 self.metadata.injectionplan]
 
         if self._injectionplan is None:
-            print('fetching')
             ip = self._get_injectionplan()
             self._injectionplan = BoreholeHydraulics(ip) if ip else None
 
@@ -107,18 +117,52 @@ class ModelRunClient(BaseClient):
                 self.metadata.modelconfig]
 
         if self._modelconfig is None:
-            mc = self._get_modelconfig()
-            self._modelconfig = mc if mc else None
+            self._modelconfig = self._get_modelconfig()
 
         return self._modelconfig.copy()
 
-    @property
     def _get_modelconfig(self) -> dict:
         """
         Get all model configs for the forecast.
         """
         request_url = f'{self.url}/v1/modelruns/' \
             f'{self._metadata["oid"]}/modelconfig'
+
+        data = self._get(request_url)
+
+        return data
+
+    def get_results(self) \
+            -> list[ForecastCatalog] | list[ForecastGRRateGrid] | None:
+        """
+        Get the results for the model run.
+
+        Returns:
+            A list of ForecastCatalog or ForecastGRRateGrid objects,
+            or None if no results are available.
+        """
+        if self._results is not None:
+            return self._results.copy()
+
+        self._results = self._get_results()
+
+        if self.modelconfig['result_type'] == 'GRID':
+            self._results = deserialize_rates(self._results)
+        elif self.modelconfig['result_type'] == 'CATALOG':
+            raise NotImplementedError(
+                'Catalog results are not yet implemented.')
+        elif self.modelconfig['result_type'] == 'BINS':
+            raise NotImplementedError(
+                'MagnitudeBins results are not yet implemented.')
+
+        return self._results.copy()
+
+    def _get_results(self) -> bytes:
+        """
+        Get the results for the model run.
+        """
+        request_url = f'{self.url}/v1/modelruns/' \
+            f'{self._metadata["oid"]}/results'
 
         data = self._get(request_url)
 
